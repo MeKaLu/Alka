@@ -30,55 +30,35 @@ const gl = @import("core/gl.zig");
 const input = @import("core/input.zig");
 const window = @import("core/window.zig");
 const m = @import("core/math/math.zig");
+const pr = @import("private.zig");
 
 usingnamespace @import("core/log.zig");
 const alog = std.log.scoped(.alka);
 
-const perror = error{ EngineIsInitialized, EngineIsNotInitialized };
 /// Error set
-pub const Error = perror || glfw.GLFWError || renderer.Error || gl.Error || input.Error;
+pub const Error = pr.Error;
 
-pub const max_quad = 1024 * 8;
-pub const Vertex2D = comptime renderer.VertexGeneric(true, m.Vec2f);
-pub const Batch2DQuad = comptime renderer.BatchGeneric(max_quad, 6, 4, Vertex2D);
-pub const Colour = renderer.Colour;
+pub const max_quad = pr.max_quad;
+pub const Vertex2D = pr.Vertex2D;
+pub const Batch2DQuad = pr.Batch2DQuad;
+pub const Colour = pr.Colour;
 
 // error: inferring error set of return type valid only for function definitions
 // var pupdateproc: ?fn (deltatime: f32) !void = null;
 //                                       ^
-pub const Callbacks = struct {
-    update: ?fn (deltatime: f32) anyerror!void = null,
-    fixed: ?fn (fixedtime: f32) anyerror!void = null,
-    draw: ?fn () anyerror!void = null,
-    resize: ?fn (w: i32, h: i32) void = null,
-    close: ?fn () void = null,
-};
-
-const private = struct {
-    callbacks: Callbacks = Callbacks{},
-    alloc: *std.mem.Allocator = undefined,
-
-    winrun: bool = false,
-    targetfps: f64 = 0.0,
-
-    win: window.Info = window.Info{},
-    input: input.Info = input.Info{},
-    frametime: window.FrameTime = window.FrameTime{},
-    fps: window.FpsCalculator = window.FpsCalculator{},
-
-    mousep: m.Vec2f = m.Vec2f{},
-    camera2d: m.Camera2D = m.Camera2D{},
-};
+pub const Callbacks = pr.Callbacks;
+pub const AssetManager = pr.AssetManager;
 
 var pengineready: bool = false;
-var p: *private = undefined;
+var p: *pr.Private = undefined;
 
 /// Initializes the engine
 pub fn init(callbacks: Callbacks, width: i32, height: i32, title: []const u8, fpslimit: u32, resizable: bool, alloc: *std.mem.Allocator) Error!void {
     if (pengineready) return Error.EngineIsInitialized;
 
-    p = try alloc.create(private);
-    p.* = private{};
+    p = try alloc.create(pr.Private);
+    p.* = pr.Private{};
+    pr.setstruct(p);
 
     p.alloc = alloc;
 
@@ -86,21 +66,22 @@ pub fn init(callbacks: Callbacks, width: i32, height: i32, title: []const u8, fp
     try glfw.windowHint(glfw.WindowHint.Resizable, if (resizable) 1 else 0);
     gl.setProfile();
 
+    p.input.clearBindings();
+    p.defaults.cam2d.ortho = m.Mat4x4f.ortho(0, @intToFloat(f32, p.win.size.width), @intToFloat(f32, p.win.size.height), 0, -1, 1);
+
     p.win.size.width = width;
     p.win.size.height = height;
-    p.win.minsize = p.win.size;
-    p.win.maxsize = p.win.size;
+    p.win.minsize = if (resizable) .{ .width = 100, .height = 100 } else p.win.size;
+    p.win.maxsize = if (resizable) .{ .width = 10000, .height = 10000 } else p.win.size;
     p.win.title = title;
-    p.win.callbacks.close = pcloseCallback;
-    p.win.callbacks.resize = presizeCallback;
-    p.win.callbacks.keyinp = pkeyboardCallback;
-    p.win.callbacks.mouseinp = pmousebuttonCallback;
-    p.win.callbacks.mousepos = pmousePosCallback;
+    p.win.callbacks.close = pr.closeCallback;
+    p.win.callbacks.resize = pr.resizeCallback;
+    p.win.callbacks.keyinp = pr.keyboardCallback;
+    p.win.callbacks.mouseinp = pr.mousebuttonCallback;
+    p.win.callbacks.mousepos = pr.mousePosCallback;
+    setCallbacks(callbacks);
 
     if (fpslimit != 0) p.targetfps = 1.0 / @intToFloat(f32, fpslimit);
-
-    p.input.clearBindings();
-    p.camera2d.ortho = m.Mat4x4f.ortho(0, @intToFloat(f32, p.win.size.width), @intToFloat(f32, p.win.size.height), 0, -1, 1);
 
     try p.win.create(false, true);
     try glfw.makeContextCurrent(p.win.handle);
@@ -113,15 +94,33 @@ pub fn init(callbacks: Callbacks, width: i32, height: i32, title: []const u8, fp
         try glfw.swapInterval(0);
     }
 
-    setCallbacks(callbacks);
-    pengineready = true;
+    p.assetmanager.alloc = p.alloc;
+    try p.assetmanager.init();
 
+    try p.assetmanager.loadShader(pr.embed.default_shader.id, pr.embed.default_shader.vertex_shader, pr.embed.default_shader.fragment_shader);
+
+    {
+        var c = [_]renderer.UColour{
+            .{ .r = 255, .g = 255, .b = 255, .a = 255 },
+        };
+        const wtexture = renderer.Texture.createFromColour(&c, 1, 1);
+        try p.assetmanager.loadTexturePro(pr.embed.white_texture_id, wtexture);
+    }
+
+    try pr.createBatch();
+
+    pengineready = true;
     alog.info("fully initialized!", .{});
 }
 
 /// Deinitializes the engine
 pub fn deinit() Error!void {
     if (!pengineready) return Error.EngineIsNotInitialized;
+    pr.destroyBatch(0);
+
+    p.alloc.free(p.batchs);
+
+    p.assetmanager.deinit();
 
     try p.win.destroy();
     gl.deinit();
@@ -154,6 +153,10 @@ pub fn update() !void {
     var dt: f64 = 0.01;
 
     while (p.winrun) {
+        if (p.callbacks.update) |fun| {
+            try fun(@floatCast(f32, p.frametime.delta));
+        }
+
         try p.frametime.start();
         var ftime: f64 = p.frametime.current - last;
         if (ftime > 0.25) {
@@ -161,10 +164,6 @@ pub fn update() !void {
         }
         last = p.frametime.current;
         accumulator += ftime;
-
-        if (p.callbacks.update) |fun| {
-            try fun(@floatCast(f32, p.frametime.delta));
-        }
 
         if (p.callbacks.fixed) |fun| {
             while (accumulator >= dt) : (accumulator -= dt) {
@@ -178,8 +177,24 @@ pub fn update() !void {
             try fun();
         }
 
+        // Render all the batches
+        {
+            var i: usize = 0;
+            while (i < p.batch_counter) : (i += 1) {
+                try pr.renderBatch(i);
+            }
+        }
+
         try glfw.swapBuffers(p.win.handle);
         try glfw.pollEvents();
+
+        // Clean all the batches
+        {
+            var i: usize = 0;
+            while (i < p.batch_counter) : (i += 1) {
+                try pr.cleanBatch(i);
+            }
+        }
 
         try p.frametime.stop();
         try p.frametime.sleep(p.targetfps);
@@ -198,6 +213,16 @@ pub fn getFps() u32 {
     return p.fps.fps;
 }
 
+/// Returns the debug information
+/// Warning: you have to manually free the buffer
+pub fn getDebug() ![]u8 {
+    if (!pengineready) return Error.EngineIsNotInitialized;
+    var buffer: []u8 = try p.alloc.alloc(u8, 255);
+
+    buffer = try std.fmt.bufPrintZ(buffer, "update: {}\tdraw: {}\tdelta: {}\tfps: {}", .{ p.frametime.update, p.frametime.draw, p.frametime.delta, p.fps.fps });
+    return buffer;
+}
+
 /// Returns the window
 pub fn getWindow() *window.Info {
     return &p.win;
@@ -213,9 +238,9 @@ pub fn getMouse() m.Vec2f {
     return p.mousep;
 }
 
-/// Returns the ptr to camera2d
+/// Returns the ptr to default camera2d
 pub fn getCamera2D() *m.Camera2D {
-    return &p.camera2d;
+    return &p.defaults.cam2d;
 }
 
 /// Sets the callbacks
@@ -226,31 +251,4 @@ pub fn setCallbacks(calls: Callbacks) void {
 /// Sets the background colour
 pub fn setBackgroundColour(r: f32, g: f32, b: f32) void {
     gl.clearColour(r, g, b, 1);
-}
-
-fn pcloseCallback(handle: ?*glfw.Window) void {
-    p.winrun = false;
-    if (p.callbacks.close) |fun| {
-        fun();
-    }
-}
-
-fn presizeCallback(handle: ?*glfw.Window, w: i32, h: i32) void {
-    gl.viewport(0, 0, w, h);
-    if (p.callbacks.resize) |fun| {
-        fun(w, h);
-    }
-}
-
-fn pkeyboardCallback(handle: ?*glfw.Window, key: i32, sc: i32, ac: i32, mods: i32) void {
-    p.input.handleKeyboard(key, ac);
-}
-
-fn pmousebuttonCallback(handle: ?*glfw.Window, key: i32, ac: i32, mods: i32) void {
-    p.input.handleMouse(key, ac);
-}
-
-fn pmousePosCallback(handle: ?*glfw.Window, x: f64, y: f64) void {
-    p.mousep.x = @floatCast(f32, x);
-    p.mousep.y = @floatCast(f32, y);
 }

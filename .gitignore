@@ -1,5 +1,6 @@
 build
 zig-cache
+zig-out
 vscode
 build_runner.zig
 src/.vscode

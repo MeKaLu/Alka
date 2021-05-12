@@ -224,7 +224,7 @@ pub fn shaderCompile(alloc: *std.mem.Allocator, source: []const u8, comptime typ
 
         c.glGetShaderInfoLog(result, len, &len, @ptrCast([*c]u8, msg));
 
-        alogg.emerg("{}: {}", .{ source, msg });
+        alogg.emerg("{s}: {s}", .{ source, msg });
         shaderDelete(result);
         alloc.free(msg);
         @panic("unable to compile shader!");
