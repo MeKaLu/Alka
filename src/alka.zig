@@ -35,8 +35,10 @@ const pr = @import("private.zig");
 usingnamespace @import("core/log.zig");
 const alog = std.log.scoped(.alka);
 
+const perror = error{InvalidBatch};
+
 /// Error set
-pub const Error = pr.Error;
+pub const Error = perror || pr.Error;
 
 pub const max_quad = pr.max_quad;
 pub const Vertex2D = pr.Vertex2D;
@@ -48,6 +50,14 @@ pub const Colour = pr.Colour;
 //                                       ^
 pub const Callbacks = pr.Callbacks;
 pub const AssetManager = pr.AssetManager;
+pub const Batch = struct {
+    id: i32 = -1,
+    mode: gl.DrawMode = undefined,
+    shader: u32 = undefined,
+    texture: renderer.Texture = undefined,
+    cam2d: *m.Camera2D = undefined,
+    subcounter: *const u32 = 0,
+};
 
 var pengineready: bool = false;
 var p: *pr.Private = undefined;
@@ -67,7 +77,6 @@ pub fn init(callbacks: Callbacks, width: i32, height: i32, title: []const u8, fp
     gl.setProfile();
 
     p.input.clearBindings();
-    p.defaults.cam2d.ortho = m.Mat4x4f.ortho(0, @intToFloat(f32, p.win.size.width), @intToFloat(f32, p.win.size.height), 0, -1, 1);
 
     p.win.size.width = width;
     p.win.size.height = height;
@@ -94,6 +103,9 @@ pub fn init(callbacks: Callbacks, width: i32, height: i32, title: []const u8, fp
         try glfw.swapInterval(0);
     }
 
+    p.defaults.cam2d = m.Camera2D{};
+    p.defaults.cam2d.ortho = m.Mat4x4f.ortho(0, @intToFloat(f32, p.win.size.width), @intToFloat(f32, p.win.size.height), 0, -1, 1);
+
     p.assetmanager.alloc = p.alloc;
     try p.assetmanager.init();
 
@@ -107,8 +119,6 @@ pub fn init(callbacks: Callbacks, width: i32, height: i32, title: []const u8, fp
         try p.assetmanager.loadTexturePro(pr.embed.white_texture_id, wtexture);
     }
 
-    try pr.createBatch();
-
     pengineready = true;
     alog.info("fully initialized!", .{});
 }
@@ -116,9 +126,17 @@ pub fn init(callbacks: Callbacks, width: i32, height: i32, title: []const u8, fp
 /// Deinitializes the engine
 pub fn deinit() Error!void {
     if (!pengineready) return Error.EngineIsNotInitialized;
-    pr.destroyBatch(0);
-
-    p.alloc.free(p.batchs);
+    // Destroy all the batchs
+    if (p.batch_counter > 0) {
+        var i: usize = 0;
+        while (i < p.batch_counter) : (i += 1) {
+            if (p.batchs[i].state != pr.BatchState.unknown) {
+                pr.destroyBatch(i);
+                alog.notice("batch(id: {}) destroyed!", .{i});
+            }
+        }
+        p.alloc.free(p.batchs);
+    }
 
     p.assetmanager.deinit();
 
@@ -238,9 +256,66 @@ pub fn getMouse() m.Vec2f {
     return p.mousep;
 }
 
+/// Returns the ptr to assetmanager
+pub fn getAssetManager() *AssetManager {
+    return &p.assetmanager;
+}
+
 /// Returns the ptr to default camera2d
 pub fn getCamera2D() *m.Camera2D {
     return &p.defaults.cam2d;
+}
+
+/// Returns the requested batch with given attribs
+/// Note: updating every frame is the way to go
+pub fn getBatch(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Error!Batch {
+    var i: usize = 0;
+    while (i < p.batch_counter) : (i += 1) {
+        if (p.batchs[i].state == pr.BatchState.active and p.batchs[i].mode == mode and p.batchs[i].shader == sh and p.batchs[i].texture.id == texture.id) return Batch{
+            .id = @intCast(i32, i),
+            .mode = p.batchs[i].mode,
+            .shader = p.batchs[i].shader,
+            .texture = p.batchs[i].texture,
+            .cam2d = &p.batchs[i].cam2d,
+            .subcounter = &p.batchs[i].data.submission_counter,
+        };
+    }
+    return Error.InvalidBatch;
+}
+
+/// Returns the ptr to core batch
+pub fn getBatchCore(id: usize) Error!*Batch2DQuad {
+    if (p.batchs[id].state == pr.BatchState.active) {
+        return &p.batchs[id].data;
+    }
+    return Error.InvalidBatch;
+}
+
+/// Creates a batch with given attribs
+/// Note: updating every frame is the way to go
+pub fn createBatch(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Error!Batch {
+    var i = pr.findBatch() catch |err| {
+        if (err == Error.FailedToFind) {
+            try pr.createBatch();
+            return createBatch(mode, sh, texture);
+        } else return err;
+    };
+
+    var b = &p.batchs[i];
+    b.state = pr.BatchState.active;
+    b.mode = mode;
+    b.shader = sh;
+    b.texture = texture;
+    b.cam2d = p.defaults.cam2d;
+
+    return Batch{
+        .id = @intCast(i32, i),
+        .mode = mode,
+        .shader = sh,
+        .texture = texture,
+        .cam2d = &b.cam2d,
+        .subcounter = &b.data.submission_counter,
+    };
 }
 
 /// Sets the callbacks
@@ -251,4 +326,91 @@ pub fn setCallbacks(calls: Callbacks) void {
 /// Sets the background colour
 pub fn setBackgroundColour(r: f32, g: f32, b: f32) void {
     gl.clearColour(r, g, b, 1);
+}
+
+/// Renders the given batch attribs
+pub fn renderBatch(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Error!void {
+    const batch = try getBatch(mode, sh, texture);
+    const i = @intCast(usize, batch.id);
+    try pr.drawBatch(i);
+}
+
+/// Draws a basic rectangle
+pub fn drawRectangle(rect: m.Rectangle, colour: Colour) Error!void {
+    const batch = getBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(pr.embed.white_texture_id)) catch |err| {
+        if (err == Error.InvalidBatch) {
+            _ = try createBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(pr.embed.white_texture_id));
+            return try drawRectangle(rect, colour);
+        } else return err;
+    };
+
+    const i = @intCast(usize, batch.id);
+
+    const pos0 = m.Vec2f{ .x = rect.position.x, .y = rect.position.y };
+    const pos1 = m.Vec2f{ .x = rect.position.x + rect.size.x, .y = rect.position.y };
+    const pos2 = m.Vec2f{ .x = rect.position.x + rect.size.x, .y = rect.position.y + rect.size.y };
+    const pos3 = m.Vec2f{ .x = rect.position.x, .y = rect.position.y + rect.size.y };
+
+    const vx = [Batch2DQuad.max_vertex_count]Vertex2D{
+        .{ .position = pos0, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+        .{ .position = pos1, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+        .{ .position = pos2, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+        .{ .position = pos3, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+    };
+
+    p.batchs[i].data.submitDrawable(vx) catch |err| {
+        if (err == Error.ObjectOverflow) {
+            try pr.drawBatch(i);
+            try pr.cleanBatch(i);
+
+            try p.batchs[i].data.submitDrawable(vx);
+            alog.notice("batch(id: {}) flushed!", .{i});
+        } else return err;
+    };
+}
+
+/// Draws a rectangle, angle should be in radians
+pub fn drawRectangleAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: Colour) Error!void {
+    const batch = getBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(pr.embed.white_texture_id)) catch |err| {
+        if (err == Error.InvalidBatch) {
+            _ = try createBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(pr.embed.white_texture_id));
+            return try drawRectangleAdv(rect, origin, angle, colour);
+        } else return err;
+    };
+
+    const i = @intCast(usize, batch.id);
+
+    var model = m.ModelMatrix{};
+    model.translate(rect.position.x, rect.position.y, 0);
+    model.translate(origin.x, origin.y, 0);
+    model.rotate(0, 0, 1, angle);
+    model.translate(-origin.x, -origin.y, 0);
+    const mvp = model.model;
+
+    const r0 = m.Vec3f.transform(.{ .x = 0, .y = 0 }, mvp);
+    const r1 = m.Vec3f.transform(.{ .x = rect.size.x, .y = 0 }, mvp);
+    const r2 = m.Vec3f.transform(.{ .x = rect.size.x, .y = rect.size.y }, mvp);
+    const r3 = m.Vec3f.transform(.{ .x = 0, .y = rect.size.y }, mvp);
+
+    const pos0 = m.Vec2f{ .x = rect.position.x + r0.x, .y = rect.position.y + r0.y };
+    const pos1 = m.Vec2f{ .x = rect.position.x + r1.x, .y = rect.position.y + r1.y };
+    const pos2 = m.Vec2f{ .x = rect.position.x + r2.x, .y = rect.position.y + r2.y };
+    const pos3 = m.Vec2f{ .x = rect.position.x + r3.x, .y = rect.position.y + r3.y };
+
+    const vx = [Batch2DQuad.max_vertex_count]Vertex2D{
+        .{ .position = pos0, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+        .{ .position = pos1, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+        .{ .position = pos2, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+        .{ .position = pos3, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+    };
+
+    p.batchs[i].data.submitDrawable(vx) catch |err| {
+        if (err == Error.ObjectOverflow) {
+            try pr.drawBatch(i);
+            try pr.cleanBatch(i);
+
+            try p.batchs[i].data.submitDrawable(vx);
+            alog.notice("batch(id: {}) flushed!", .{i});
+        } else return err;
+    };
 }

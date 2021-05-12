@@ -29,6 +29,7 @@ const renderer = @import("core/renderer.zig");
 const gl = @import("core/gl.zig");
 const input = @import("core/input.zig");
 const window = @import("core/window.zig");
+const c = @import("core/c.zig");
 const m = @import("core/math/math.zig");
 
 usingnamespace @import("core/log.zig");
@@ -43,7 +44,7 @@ pub const embed = struct {
     pub const white_texture_id = 0;
 };
 
-const perror = error{ EngineIsInitialized, EngineIsNotInitialized };
+const perror = error{ EngineIsInitialized, EngineIsNotInitialized, FailedToFind };
 const asseterror = error{ AlreadyExists, FailedToResize, InvalidId };
 /// Error set
 pub const Error = perror || asseterror || glfw.GLFWError || renderer.Error || gl.Error || input.Error;
@@ -284,11 +285,24 @@ pub fn createBatch() Error!void {
     p.batchs[i].texture = try p.assetmanager.getTexture(embed.white_texture_id);
     p.batchs[i].state = BatchState.empty;
 
+    p.batchs[i].data.submission_counter = 0;
+    p.batchs[i].data.submitfn = submitQuadFn;
     try p.batchs[i].data.create(p.batchs[i].shader, setShaderAttribs);
+}
+
+pub fn findBatch() Error!usize {
+    var i: usize = 0;
+    while (i < p.batch_counter) : (i += 1) {
+        if (p.batchs[i].state == BatchState.empty) {
+            return i;
+        }
+    }
+    return Error.FailedToFind;
 }
 
 pub fn destroyBatch(i: usize) void {
     p.batchs[i].data.destroy();
+    p.batchs[i].data.submission_counter = 0;
     p.batchs[i] = Batch{};
 }
 
@@ -300,6 +314,7 @@ pub fn drawBatch(i: usize) Error!void {
     gl.shaderProgramUse(b.shader);
     defer gl.shaderProgramUse(0);
 
+    c.glActiveTexture(c.GL_TEXTURE0);
     gl.textureBind(gl.TextureType.t2D, b.texture.id);
     defer gl.textureBind(gl.TextureType.t2D, 0);
 
@@ -317,10 +332,9 @@ pub fn renderBatch(i: usize) Error!void {
 
 pub fn cleanBatch(i: usize) Error!void {
     p.batchs[i].data.cleanAll();
+    p.batchs[i].data.submission_counter = 0;
     p.batchs[i].cam2d = p.defaults.cam2d;
     p.batchs[i].state = BatchState.empty;
-    p.batchs[i].shader = try p.assetmanager.getShader(embed.default_shader.id);
-    p.batchs[i].texture = try p.assetmanager.getTexture(embed.white_texture_id);
 }
 
 pub fn closeCallback(handle: ?*glfw.Window) void {
@@ -332,6 +346,7 @@ pub fn closeCallback(handle: ?*glfw.Window) void {
 
 pub fn resizeCallback(handle: ?*glfw.Window, w: i32, h: i32) void {
     gl.viewport(0, 0, w, h);
+    //gl.ortho(0, @intToFloat(f32, p.win.size.width), @intToFloat(f32, p.win.size.height), 0, -1, 1);
     if (p.callbacks.resize) |fun| {
         fun(w, h);
     }
@@ -361,9 +376,9 @@ fn setShaderAttribs() void {
     gl.shaderProgramSetVertexAttribPointer(2, 4, f32, false, stride, @intToPtr(?*const c_void, @byteOffsetOf(Vertex2D, "colour")));
 }
 
-fn quadSubmitFn(self: *Batch2DQuad, vertex: [Batch2DQuad.max_vertex_count]Vertex2D) renderer.Error!void {
-    try psubmitVerticesQuad(Batch2DQuad, self, vertex);
-    try psubmitIndiciesQuad(Batch2DQuad, self);
+fn submitQuadFn(self: *Batch2DQuad, vertex: [Batch2DQuad.max_vertex_count]Vertex2D) renderer.Error!void {
+    try submitVerticesQuad(Batch2DQuad, self, vertex);
+    try submitIndiciesQuad(Batch2DQuad, self);
 
     self.submission_counter += 1;
 }
@@ -375,7 +390,7 @@ fn submitVerticesQuad(comptime typ: type, self: *typ, vertex: [typ.max_vertex_co
     try self.submitVertex(self.submission_counter, 3, vertex[3]);
 }
 
-fn psubmitIndiciesQuad(comptime typ: type, self: *typ) renderer.Error!void {
+fn submitIndiciesQuad(comptime typ: type, self: *typ) renderer.Error!void {
     if (self.submission_counter == 0) {
         try self.submitIndex(self.submission_counter, 0, 0);
         try self.submitIndex(self.submission_counter, 1, 1);
