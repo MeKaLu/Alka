@@ -19,6 +19,7 @@ fn draw() !void {
     const deftexture = try asset.getTexture(0);
     const testpng = try asset.getTexture(1);
     const ttf = try asset.getTexture(2);
+    const font = try asset.getTexture(3);
 
     //var batch = try alka.createBatch(core.gl.DrawMode.triangles, defshader, deftexture);
 
@@ -33,6 +34,10 @@ fn draw() !void {
     //try alka.drawTexture(1, r2, rs2, col);
 
     try alka.drawTexture(2, r2, rs2, col);
+
+    const r3 = Rectangle{ .position = Vec2f{ .x = 200.0, .y = 300.0 }, .size = Vec2f{ .x = @intToFloat(f32, font.width), .y = @intToFloat(f32, font.height) } };
+    const rs3 = Rectangle{ .position = Vec2f{ .x = 0.0, .y = 0.0 }, .size = Vec2f{ .x = @intToFloat(f32, font.width), .y = @intToFloat(f32, font.height) } };
+    try alka.drawTexture(3, r3, rs3, col);
 }
 
 pub fn main() !void {
@@ -53,9 +58,14 @@ pub fn main() !void {
     const texture = try core.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);
     try alka.getAssetManager().loadTexturePro(2, texture);
 
+    var font = try core.renderer.Font.createFromTTF(&gpa.allocator, "assets/arial.ttf", null, 24);
+    try alka.getAssetManager().loadTexturePro(3, font.texture);
+
     try alka.open();
     try alka.update();
     try alka.close();
+
+    font.destroy();
 
     try alka.deinit();
 

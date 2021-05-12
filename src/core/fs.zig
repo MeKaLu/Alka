@@ -26,13 +26,13 @@
 const std = @import("std");
 pub const Error = error{FailedToReadFile};
 
-pub fn readFile(alloc: *std.mem.Allocator, path: []const u8) Error![]const u8 {
+pub fn readFile(alloc: *std.mem.Allocator, path: []const u8) Error![]u8 {
     var f = std.fs.cwd().openFile(path, .{ .read = true }) catch return Error.FailedToReadFile;
     defer f.close();
 
     f.seekFromEnd(0) catch return Error.FailedToReadFile;
     const size = f.getPos() catch return Error.FailedToReadFile;
     f.seekTo(0) catch return Error.FailedToReadFile;
-    const mem = f.readToEndAlloc(alloc, size) catch return Error.FailedToReadFile;
+    var mem = f.readToEndAlloc(alloc, size) catch return Error.FailedToReadFile;
     return mem;
 }

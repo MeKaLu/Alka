@@ -28,4 +28,5 @@ pub usingnamespace @cImport({
     @cInclude("GLFW/glfw3.h");
     @cInclude("stb/image.h");
     @cInclude("stb/truetype.h");
+    @cInclude("stb/rect_pack.h");
 });
