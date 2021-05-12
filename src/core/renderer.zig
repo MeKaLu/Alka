@@ -27,6 +27,7 @@ const std = @import("std");
 
 const c = @import("c.zig");
 const gl = @import("gl.zig");
+const fs = @import("fs.zig");
 usingnamespace @import("math/math.zig");
 usingnamespace @import("log.zig");
 
@@ -40,30 +41,8 @@ pub const Error = error{
     IndexOverflow,
     UnknownSubmitFn,
     FailedToLoadTexture,
-    FailedToReadFile,
-};
-
-fn readFile(alloc: *std.mem.Allocator, path: []const u8) Error![]const u8 {
-    var f = std.fs.cwd().openFile(path, .{ .read = true }) catch return Error.FailedToReadFile;
-    defer f.close();
-
-    f.seekFromEnd(0) catch return Error.FailedToReadFile;
-    const size = f.getPos() catch return Error.FailedToReadFile;
-    f.seekTo(0) catch return Error.FailedToReadFile;
-    const mem = f.readToEndAlloc(alloc, size) catch return Error.FailedToReadFile;
-    return mem;
-}
-
-fn texLoadSetup(self: *Texture) void {
-    gl.texturesGen(1, @ptrCast([*]u32, &self.id));
-    gl.textureBind(gl.TextureType.t2D, self.id);
-
-    gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.min_filter, gl.TextureParamater.filter_nearest);
-    gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.mag_filter, gl.TextureParamater.filter_nearest);
-
-    gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_s, gl.TextureParamater.wrap_repeat);
-    gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_t, gl.TextureParamater.wrap_repeat);
-}
+    FailedToLoadFont,
+} || fs.Error;
 
 /// Colour generic struct
 pub fn ColourGeneric(comptime typ: type) type {
@@ -253,9 +232,20 @@ pub const Texture = struct {
     width: i32 = 0,
     height: i32 = 0,
 
+    fn loadSetup(self: *Texture) void {
+        gl.texturesGen(1, @ptrCast([*]u32, &self.id));
+        gl.textureBind(gl.TextureType.t2D, self.id);
+
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.min_filter, gl.TextureParamater.filter_nearest);
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.mag_filter, gl.TextureParamater.filter_nearest);
+
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_s, gl.TextureParamater.wrap_repeat);
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_t, gl.TextureParamater.wrap_repeat);
+    }
+
     /// Creates a texture from png file
     pub fn createFromPNG(alloc: *std.mem.Allocator, path: []const u8) Error!Texture {
-        const mem = try readFile(alloc, path);
+        const mem = try fs.readFile(alloc, path);
         defer alloc.free(mem);
         return try createFromPNGMemory(mem);
     }
@@ -263,7 +253,7 @@ pub const Texture = struct {
     /// Creates a texture from png memory
     pub fn createFromPNGMemory(mem: []const u8) Error!Texture {
         var result = Texture{};
-        texLoadSetup(&result);
+        loadSetup(&result);
         defer gl.textureBind(gl.TextureType.t2D, 0);
 
         var nrchannels: i32 = 0;
@@ -286,15 +276,15 @@ pub const Texture = struct {
     /// Creates a texture from TTF font file with given string
     pub fn createFromTTF(alloc: *std.mem.Allocator, filepath: []const u8, string: []const u8, w: i32, h: i32, lineh: i32) Error!Texture {
         var result = Texture{ .width = w, .height = h };
-        texLoadSetup(&result);
+        loadSetup(&result);
         defer gl.textureBind(gl.TextureType.t2D, 0);
 
-        const mem = try readFile(alloc, filepath);
+        const mem = try fs.readFile(alloc, filepath);
         defer alloc.free(mem);
 
         var info: c.stbtt_fontinfo = undefined;
         if (c.stbtt_InitFont(&info, @ptrCast([*c]const u8, mem), 0) == 0) {
-            return Error.FailedToReadFile;
+            return Error.FailedToLoadFont;
         }
 
         // calculate font scaling
@@ -384,7 +374,7 @@ pub const Texture = struct {
     /// Creates a texture from given colour
     pub fn createFromColour(colour: [*]UColour, w: i32, h: i32) Texture {
         var result = Texture{ .width = w, .height = h };
-        texLoadSetup(&result);
+        loadSetup(&result);
         defer gl.textureBind(gl.TextureType.t2D, 0);
 
         gl.textureTexImage2D(gl.TextureType.t2D, 0, gl.TextureFormat.rgba8, result.width, result.height, 0, gl.TextureFormat.rgba, u8, @ptrCast(?*c_void, colour));

@@ -1,4 +1,3 @@
 #define STB_TRUETYPE_IMPLEMENTATION
-//#define STBTT_STATIC
-
+#include "rect_pack.h"
 #include "truetype.h"

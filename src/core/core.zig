@@ -25,6 +25,7 @@
 
 pub const c = @import("c.zig");
 pub const gl = @import("gl.zig");
+pub const fs = @import("fs.zig");
 pub const math = @import("math/math.zig");
 pub const glfw = @import("glfw.zig");
 pub const input = @import("input.zig");

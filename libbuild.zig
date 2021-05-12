@@ -88,7 +88,6 @@ pub fn compileOneFile(exe: *Build.LibExeObjStep, comptime enginepath: []const u8
     const flags = [_][]const u8{"-O3"} ++ globalflags;
     exe.addCSourceFile(enginepath ++ "include/onefile/GLAD/gl.c", &flags);
     exe.addCSourceFile(enginepath ++ "include/onefile/stb/image.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/onefile/stb/image_write.c", &flags);
     exe.addCSourceFile(enginepath ++ "include/onefile/stb/rect_pack.c", &flags);
     exe.addCSourceFile(enginepath ++ "include/onefile/stb/truetype.c", &flags);
 }

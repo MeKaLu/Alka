@@ -23,9 +23,16 @@
 //3. This notice may not be removed or altered from any source
 //   distribution.
 
-pub usingnamespace @cImport({
-    @cInclude("GLAD/gl.h");
-    @cInclude("GLFW/glfw3.h");
-    @cInclude("stb/image.h");
-    @cInclude("stb/truetype.h");
-});
+const std = @import("std");
+pub const Error = error{FailedToReadFile};
+
+pub fn readFile(alloc: *std.mem.Allocator, path: []const u8) Error![]const u8 {
+    var f = std.fs.cwd().openFile(path, .{ .read = true }) catch return Error.FailedToReadFile;
+    defer f.close();
+
+    f.seekFromEnd(0) catch return Error.FailedToReadFile;
+    const size = f.getPos() catch return Error.FailedToReadFile;
+    f.seekTo(0) catch return Error.FailedToReadFile;
+    const mem = f.readToEndAlloc(alloc, size) catch return Error.FailedToReadFile;
+    return mem;
+}

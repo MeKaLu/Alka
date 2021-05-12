@@ -29,6 +29,7 @@ const renderer = @import("core/renderer.zig");
 const gl = @import("core/gl.zig");
 const input = @import("core/input.zig");
 const window = @import("core/window.zig");
+const fs = @import("core/fs.zig");
 const c = @import("core/c.zig");
 const m = @import("core/math/math.zig");
 
@@ -47,7 +48,7 @@ pub const embed = struct {
 const perror = error{ EngineIsInitialized, EngineIsNotInitialized, FailedToFind };
 const asseterror = error{ AlreadyExists, FailedToResize, InvalidId };
 /// Error set
-pub const Error = perror || asseterror || glfw.GLFWError || renderer.Error || gl.Error || input.Error;
+pub const Error = perror || asseterror || glfw.GLFWError || renderer.Error || gl.Error || input.Error || fs.Error;
 
 pub const max_quad = 1024 * 8;
 pub const Vertex2D = comptime renderer.VertexGeneric(true, m.Vec2f);
