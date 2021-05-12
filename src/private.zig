@@ -365,6 +365,52 @@ pub fn mousePosCallback(handle: ?*glfw.Window, x: f64, y: f64) void {
     p.mousep.y = @floatCast(f32, y);
 }
 
+pub fn submitTextureQuad(i: usize, p0: m.Vec2f, p1: m.Vec2f, p2: m.Vec2f, p3: m.Vec2f, srect: m.Rectangle, colour: Colour) Error!void {
+    var b = &p.batchs[i];
+    const w = @intToFloat(f32, b.texture.width);
+    const h = @intToFloat(f32, b.texture.height);
+
+    var psrect = srect;
+    var flipx = false;
+    if (psrect.size.x < 0) {
+        flipx = true;
+        psrect.size.x *= -1;
+    }
+
+    if (psrect.size.y < 0) {
+        psrect.position.y -= psrect.size.y;
+    }
+
+    // top left
+    const t0 = m.Vec2f{ .x = if (flipx) (psrect.position.x + psrect.size.x) / w else psrect.position.x / w, .y = psrect.position.y / h };
+
+    // top right
+    const t1 = m.Vec2f{ .x = if (flipx) psrect.position.x / w else (psrect.position.x + psrect.size.x) / w, .y = psrect.position.y / h };
+
+    // bottom right
+    const t2 = m.Vec2f{ .x = if (flipx) psrect.position.x / w else (psrect.position.x + psrect.size.x) / w, .y = (psrect.position.y + psrect.size.y) / h };
+
+    // bottom left
+    const t3 = m.Vec2f{ .x = if (flipx) (psrect.position.x + psrect.size.x) / w else psrect.position.x / w, .y = (psrect.position.y + psrect.size.y) / h };
+
+    const vx = [Batch2DQuad.max_vertex_count]Vertex2D{
+        .{ .position = p0, .texcoord = t0, .colour = colour },
+        .{ .position = p1, .texcoord = t1, .colour = colour },
+        .{ .position = p2, .texcoord = t2, .colour = colour },
+        .{ .position = p3, .texcoord = t3, .colour = colour },
+    };
+
+    p.batchs[i].data.submitDrawable(vx) catch |err| {
+        if (err == Error.ObjectOverflow) {
+            try drawBatch(i);
+            try cleanBatch(i);
+
+            try p.batchs[i].data.submitDrawable(vx);
+            alog.notice("batch(id: {}) flushed!", .{i});
+        } else return err;
+    };
+}
+
 fn setShaderAttribs() void {
     const stride = @sizeOf(Vertex2D);
     gl.shaderProgramSetVertexAttribArray(0, true);

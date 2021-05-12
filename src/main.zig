@@ -17,6 +17,7 @@ fn draw() !void {
     var asset = alka.getAssetManager();
     const defshader = try asset.getShader(0);
     const deftexture = try asset.getTexture(0);
+    const testpng = try asset.getTexture(1);
 
     //var batch = try alka.createBatch(core.gl.DrawMode.triangles, defshader, deftexture);
 
@@ -25,6 +26,10 @@ fn draw() !void {
     //try alka.drawRectangle(r, col);
 
     try alka.drawRectangleAdv(r, Vec2f{ .x = 25, .y = 25 }, deg2radf(45), col);
+
+    const r2 = Rectangle{ .position = Vec2f{ .x = 200.0, .y = 200.0 }, .size = Vec2f{ .x = 50.0, .y = 50.0 } };
+    const rs2 = Rectangle{ .position = Vec2f{ .x = 0.0, .y = 0.0 }, .size = Vec2f{ .x = @intToFloat(f32, testpng.width), .y = @intToFloat(f32, testpng.height) } };
+    try alka.drawTexture(1, r2, rs2, col);
 }
 
 pub fn main() !void {
@@ -39,6 +44,8 @@ pub fn main() !void {
     };
 
     try alka.init(callbacks, 1024, 768, "title go brrr", 0, false, &gpa.allocator);
+
+    try alka.getAssetManager().loadTexture(1, "assets/test.png");
 
     try alka.open();
     try alka.update();

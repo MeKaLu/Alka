@@ -50,7 +50,7 @@ fn readFile(alloc: *std.mem.Allocator, path: []const u8) Error![]const u8 {
     f.seekFromEnd(0) catch return Error.FailedToReadFile;
     const size = f.getPos() catch return Error.FailedToReadFile;
     f.seekTo(0) catch return Error.FailedToReadFile;
-    const mem = f.inStream().readAllAlloc(alloc, size) catch return Error.FailedToReadFile;
+    const mem = f.readToEndAlloc(alloc, size) catch return Error.FailedToReadFile;
     return mem;
 }
 

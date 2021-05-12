@@ -414,3 +414,53 @@ pub fn drawRectangleAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: 
         } else return err;
     };
 }
+
+/// Draws a texture
+pub fn drawTexture(texture_id: u64, rect: m.Rectangle, srect: m.Rectangle, colour: Colour) Error!void {
+    const batch = getBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(texture_id)) catch |err| {
+        if (err == Error.InvalidBatch) {
+            _ = try createBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(texture_id));
+            return try drawTexture(texture_id, rect, srect, colour);
+        } else return err;
+    };
+
+    const i = @intCast(usize, batch.id);
+
+    const pos0 = m.Vec2f{ .x = rect.position.x, .y = rect.position.y };
+    const pos1 = m.Vec2f{ .x = rect.position.x + rect.size.x, .y = rect.position.y };
+    const pos2 = m.Vec2f{ .x = rect.position.x + rect.size.x, .y = rect.position.y + rect.size.y };
+    const pos3 = m.Vec2f{ .x = rect.position.x, .y = rect.position.y + rect.size.y };
+
+    try pr.submitTextureQuad(i, pos0, pos1, pos2, pos3, srect, colour);
+}
+
+/// Draws a texture, angle should be in radians
+pub fn drawTextureAdv(texture_id: u64, rect: m.Rectangle, srect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: Colour) Error!void {
+    const batch = getBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(texture_id)) catch |err| {
+        if (err == Error.InvalidBatch) {
+            _ = try createBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(texture_id));
+            return try drawTextureAdv(texture_id, rect, srect, origin, angle, colour);
+        } else return err;
+    };
+
+    const i = @intCast(usize, batch.id);
+
+    var model = m.ModelMatrix{};
+    model.translate(rect.position.x, rect.position.y, 0);
+    model.translate(origin.x, origin.y, 0);
+    model.rotate(0, 0, 1, angle);
+    model.translate(-origin.x, -origin.y, 0);
+    const mvp = model.model;
+
+    const r0 = m.Vec3f.transform(.{ .x = 0, .y = 0 }, mvp);
+    const r1 = m.Vec3f.transform(.{ .x = rect.size.x, .y = 0 }, mvp);
+    const r2 = m.Vec3f.transform(.{ .x = rect.size.x, .y = rect.size.y }, mvp);
+    const r3 = m.Vec3f.transform(.{ .x = 0, .y = rect.size.y }, mvp);
+
+    const pos0 = m.Vec2f{ .x = rect.position.x + r0.x, .y = rect.position.y + r0.y };
+    const pos1 = m.Vec2f{ .x = rect.position.x + r1.x, .y = rect.position.y + r1.y };
+    const pos2 = m.Vec2f{ .x = rect.position.x + r2.x, .y = rect.position.y + r2.y };
+    const pos3 = m.Vec2f{ .x = rect.position.x + r3.x, .y = rect.position.y + r3.y };
+
+    try pr.submitTextureQuad(i, pos0, pos1, pos2, pos3, srect, colour);
+}
