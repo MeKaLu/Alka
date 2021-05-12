@@ -66,7 +66,7 @@ pub const TextureType = enum {
 // zig fmt: off
 /// Texture formats
 pub const TextureFormat = enum {
-    rgb, rgb8, rgb32f, rgba, rgba8, rgba32f, red, alpha
+    rg, rg8, rgb, rgb8, rgb32f, rgba, rgba8, rgba32f, red, alpha
 };
 // zig fmt: on
 
@@ -341,7 +341,7 @@ pub fn texturesDelete(count: i32, textures: [*]const u32) void {
 
 /// Generate mipmaps for a specified texture target
 pub fn texturesGenMipmap(comptime target: TextureType) void {
-    c.glGenMipmap(pdecideTextureType(target));
+    c.glGenerateMipmap(pdecideTextureType(target));
 }
 
 /// Bind a named texture to a texturing target
@@ -408,6 +408,8 @@ fn pdecideTextureType(comptime typ: TextureType) u32 {
 /// Decides the Texture format from given TextureFormat
 fn pdecideTextureFormat(comptime typ: TextureFormat) u32 {
     switch (typ) {
+        TextureFormat.rg => return c.GL_RG,
+        TextureFormat.rg8 => return c.GL_RG8,
         TextureFormat.rgb => return c.GL_RGB,
         TextureFormat.rgb8 => return c.GL_RGB8,
         TextureFormat.rgb32f => return c.GL_RGB32F,

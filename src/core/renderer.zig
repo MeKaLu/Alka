@@ -278,6 +278,105 @@ pub const Texture = struct {
         }
 
         gl.textureTexImage2D(gl.TextureType.t2D, 0, gl.TextureFormat.rgba8, result.width, result.height, 0, gl.TextureFormat.rgba, u8, data);
+        gl.texturesGenMipmap(gl.TextureType.t2D);
+
+        return result;
+    }
+
+    /// Creates a texture from TTF font file with given string
+    pub fn createFromTTF(alloc: *std.mem.Allocator, filepath: []const u8, string: []const u8, w: i32, h: i32, lineh: i32) Error!Texture {
+        var result = Texture{ .width = w, .height = h };
+        texLoadSetup(&result);
+        defer gl.textureBind(gl.TextureType.t2D, 0);
+
+        const mem = try readFile(alloc, filepath);
+        defer alloc.free(mem);
+
+        var info: c.stbtt_fontinfo = undefined;
+        if (c.stbtt_InitFont(&info, @ptrCast([*c]const u8, mem), 0) == 0) {
+            return Error.FailedToReadFile;
+        }
+
+        // calculate font scaling
+        const scale: f32 = c.stbtt_ScaleForPixelHeight(&info, @intToFloat(f32, lineh));
+
+        var x: i32 = 0;
+        var ascent: i32 = 0;
+        var descent: i32 = 0;
+        var linegap: i32 = 0;
+
+        c.stbtt_GetFontVMetrics(&info, &ascent, &descent, &linegap);
+
+        ascent = @floatToInt(i32, @round(@intToFloat(f32, ascent) * scale));
+        descent = @floatToInt(i32, @round(@intToFloat(f32, descent) * scale));
+
+        // create a bitmap for the phrase
+        var bitmap: []u8 = alloc.alloc(u8, @intCast(usize, w * h)) catch return Error.FailedToLoadTexture;
+        {
+            var i: usize = 0;
+            while (i < w * h) : (i += 1) {
+                bitmap[i] = 0;
+            }
+        }
+
+        {
+            var i: usize = 0;
+            while (i < string.len) : (i += 1) {
+                if (string[i] == 0) continue;
+
+                // how wide is this character
+                var ax: i32 = 0;
+                var lsb: i32 = 0;
+                c.stbtt_GetCodepointHMetrics(&info, string[i], &ax, &lsb);
+
+                // get bounding box for character (may be offset to account for chars that
+                // dip above or below the line
+                var c_x1: i32 = 0;
+                var c_y1: i32 = 0;
+                var c_x2: i32 = 0;
+                var c_y2: i32 = 0;
+                c.stbtt_GetCodepointBitmapBox(&info, string[i], scale, scale, &c_x1, &c_y1, &c_x2, &c_y2);
+
+                // compute y (different characters have different heights
+                var y: i32 = ascent + c_y1;
+
+                // render character (stride and offset is important here)
+                var byteOffset = x + @floatToInt(i32, @round(@intToFloat(f32, lsb) * scale) + @intToFloat(f32, (y * w)));
+                c.stbtt_MakeCodepointBitmap(&info, @ptrCast([*c]u8, bitmap[@intCast(usize, byteOffset)..]), c_x2 - c_x1, c_y2 - c_y1, w, scale, scale, string[i]);
+
+                // advance x
+                x += @floatToInt(i32, @round(@intToFloat(f32, ax) * scale));
+
+                if (string.len >= i) continue;
+                // add kerning
+                var kern: i32 = 0;
+                kern = c.stbtt_GetCodepointKernAdvance(&info, string[i], string[i + 1]);
+                x += @floatToInt(i32, @round(@intToFloat(f32, kern) * scale));
+            }
+        }
+
+        // convert image data from grayscale to grayalpha
+        // two channels
+        var gralpha: []u8 = alloc.alloc(u8, @intCast(usize, w * h * 2)) catch return Error.FailedToLoadTexture;
+        {
+            var i: usize = 0;
+            var k: usize = 0;
+            while (i < w * h) : (i += 1) {
+                gralpha[k] = 255;
+                gralpha[k + 1] = bitmap[i];
+                k += 2;
+            }
+        }
+        alloc.free(bitmap);
+        bitmap = gralpha;
+        defer alloc.free(bitmap);
+
+        gl.textureTexImage2D(gl.TextureType.t2D, 0, gl.TextureFormat.rg8, result.width, result.height, 0, gl.TextureFormat.rg, u8, @ptrCast(?*c_void, bitmap));
+        // source: https://github.com/raysan5/raylib/blob/cba412cc313e4f95eafb3fba9303400e65c98984/src/rlgl.h#L2447
+        const swizzle = comptime [_]u32{ c.GL_RED, c.GL_RED, c.GL_RED, c.GL_GREEN };
+        c.glTexParameteriv(c.GL_TEXTURE_2D, c.GL_TEXTURE_SWIZZLE_RGBA, @ptrCast([*c]const i32, &swizzle));
+
+        gl.texturesGenMipmap(gl.TextureType.t2D);
 
         return result;
     }
@@ -289,6 +388,7 @@ pub const Texture = struct {
         defer gl.textureBind(gl.TextureType.t2D, 0);
 
         gl.textureTexImage2D(gl.TextureType.t2D, 0, gl.TextureFormat.rgba8, result.width, result.height, 0, gl.TextureFormat.rgba, u8, @ptrCast(?*c_void, colour));
+        gl.texturesGenMipmap(gl.TextureType.t2D);
         return result;
     }
 
