@@ -24,6 +24,15 @@ fn draw() !void {
     try alka.drawTextPoint(0, 'L', m.Vec2f{ .x = 200 + 15, .y = 300 }, 24, col);
     try alka.drawTextPoint(0, 'K', m.Vec2f{ .x = 200 + 15 * 2, .y = 300 }, 24, col);
     try alka.drawTextPoint(0, 'A', m.Vec2f{ .x = 200 + 15 * 3, .y = 300 }, 24, col);
+
+    try alka.drawText(0, "This is rendered on the fly!", m.Vec2f{ .x = 100, .y = 500 }, 32, col);
+
+    const alloc = alka.getAllocator();
+    var debug: []u8 = try alloc.alloc(u8, 255);
+    defer alloc.free(debug);
+    debug = try std.fmt.bufPrintZ(debug, "fps: {}", .{alka.getFps()});
+
+    try alka.drawText(0, debug, m.Vec2f{ .x = 20, .y = 20 }, 24, col);
 }
 
 pub fn main() !void {

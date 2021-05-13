@@ -1,4 +1,4 @@
 #!/usr/bin/sh
 
 cd ..
-zig build run 
+zig build run -Dmain=true 

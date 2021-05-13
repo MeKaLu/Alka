@@ -16,7 +16,7 @@ Get started [now](https://github.com/Kiakra/Alka/blob/master/get-started.md)
 - [x] 2D Camera
 - [ ] 2D Shape drawing
 - [x] 2D Texture drawing
-- [ ] 2D Text drawing 
+- [x] 2D Text drawing 
 - [ ] GUI system
 - [ ] Audio
 - [ ] Optional: Data packer 

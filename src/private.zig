@@ -479,11 +479,11 @@ pub fn submitTextureQuad(i: usize, p0: m.Vec2f, p1: m.Vec2f, p2: m.Vec2f, p3: m.
     };
 }
 
-pub fn submitFontPointQuad(i: usize, font_id: u64, codepoint: u64, position: m.Vec2f, psize: f32, colour: Colour) Error!void {
+pub fn submitFontPointQuad(i: usize, font_id: u64, codepoint: i32, position: m.Vec2f, psize: f32, colour: Colour) Error!void {
     var b = &p.batchs[i];
     const font = try p.assetmanager.getFont(font_id);
 
-    const index = font.glyphIndex(codepoint);
+    const index = @intCast(usize, font.glyphIndex(codepoint));
     const scale_factor: f32 = psize / @intToFloat(f32, font.base_size);
 
     // zig fmt: off

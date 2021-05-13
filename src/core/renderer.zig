@@ -403,7 +403,7 @@ pub const Font = struct {
     pub const char_fallback = 63;
 
     pub const Glyph = struct {
-        codepoint: u64 = undefined,
+        codepoint: i32 = undefined,
         offx: i32 = undefined,
         offy: i32 = undefined,
         advance: i32 = undefined,
@@ -421,7 +421,7 @@ pub const Font = struct {
     glyph_padding: i32 = undefined,
 
     // source: https://github.com/raysan5/raylib/blob/cba412cc313e4f95eafb3fba9303400e65 c98984/src/text.c#L553
-    fn loadFontData(alloc: *std.mem.Allocator, mem: []u8, fontsize: i32, fontchars: ?[]const u64) Error![]Glyph {
+    fn loadFontData(alloc: *std.mem.Allocator, mem: []u8, fontsize: i32, fontchars: ?[]const i32) Error![]Glyph {
         var info: c.stbtt_fontinfo = undefined;
         if (c.stbtt_InitFont(&info, @ptrCast([*c]const u8, mem), 0) == 0) {
             return Error.FailedToLoadFont;
@@ -445,14 +445,14 @@ pub const Font = struct {
 
         // fill fontChars in case not provided externally
         // NOTE: by default we fill charsCount consecutevely, starting at 32 (space)
-        var pfontchars: []u64 = undefined;
+        var pfontchars: []i32 = undefined;
         defer alloc.free(pfontchars);
-        pfontchars = alloc.alloc(u64, charcount) catch return Error.FailedToLoadFont;
+        pfontchars = alloc.alloc(i32, charcount) catch return Error.FailedToLoadFont;
         {
             var i: usize = 0;
             if (fontchars == null) {
                 while (i < charcount) : (i += 1) {
-                    pfontchars[i] = @intCast(u64, i) + 32;
+                    pfontchars[i] = @intCast(i32, i) + 32;
                 }
                 genfontchars = true;
             } else |ch| {
@@ -471,7 +471,7 @@ pub const Font = struct {
             var chw: i32 = 0;
             var chh: i32 = 0;
             // char value to get info for
-            var ch: u64 = pfontchars[i];
+            var ch: i32 = pfontchars[i];
             chars[i].codepoint = ch;
 
             chars[i].raw.rpixels = c.stbtt_GetCodepointBitmap(&info, scale_factor, scale_factor, @intCast(i32, ch), &chw, &chh, &chars[i].offx, &chars[i].offy);
@@ -621,17 +621,17 @@ pub const Font = struct {
     }
 
     /// Returns index position for a unicode char on font
-    pub fn glyphIndex(self: Font, codepoint: u64) u64 {
-        var index: u64 = char_fallback;
+    pub fn glyphIndex(self: Font, codepoint: i32) i32 {
+        var index: i32 = char_fallback;
 
         var i: usize = 0;
         while (i < self.glyphs.len) : (i += 1) {
-            if (self.glyphs[i].codepoint == codepoint) return @intCast(u64, i);
+            if (self.glyphs[i].codepoint == codepoint) return @intCast(i32, i);
         }
         return index;
     }
 
-    pub fn createFromTTF(alloc: *std.mem.Allocator, filepath: []const u8, chars: ?[]const u64, pixelsize: i32) Error!Font {
+    pub fn createFromTTF(alloc: *std.mem.Allocator, filepath: []const u8, chars: ?[]const i32, pixelsize: i32) Error!Font {
         var result = Font{};
         result.alloc = alloc;
         result.base_size = pixelsize;
@@ -652,8 +652,8 @@ pub const Font = struct {
         gl.textureBind(gl.TextureType.t2D, result.texture.id);
         defer gl.textureBind(gl.TextureType.t2D, 0);
 
-        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.min_filter, gl.TextureParamater.filter_linear);
-        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.mag_filter, gl.TextureParamater.filter_nearest);
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.min_filter, gl.TextureParamater.filter_mipmap_linear);
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.mag_filter, gl.TextureParamater.filter_linear);
 
         gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_s, gl.TextureParamater.wrap_repeat);
         gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_t, gl.TextureParamater.wrap_repeat);

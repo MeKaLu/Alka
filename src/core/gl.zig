@@ -83,6 +83,8 @@ pub const TextureParamaterType = enum {
 pub const TextureParamater = enum {
     filter_linear,
     filter_nearest,
+    filter_mipmap_linear,
+    filter_mipmap_nearest,
     wrap_repeat,
     wrap_mirrored_repeat,
     wrap_clamp_to_edge,
@@ -437,6 +439,8 @@ fn pdecideTextureParam(comptime typ: TextureParamater) i32 {
     switch (typ) {
         TextureParamater.filter_linear => return c.GL_LINEAR,
         TextureParamater.filter_nearest => return c.GL_NEAREST,
+        TextureParamater.filter_mipmap_linear => return c.GL_LINEAR_MIPMAP_LINEAR,
+        TextureParamater.filter_mipmap_nearest => return c.GL_LINEAR_MIPMAP_NEAREST,
         TextureParamater.wrap_repeat => return c.GL_REPEAT,
         TextureParamater.wrap_mirrored_repeat => return c.GL_MIRRORED_REPEAT,
         TextureParamater.wrap_clamp_to_edge => return c.GL_CLAMP_TO_EDGE,

@@ -36,6 +36,11 @@ fn draw() !void {
     try alka.drawTexture(2, r2, rs2, col);
 
     try alka.drawTextPoint(0, 'A', Vec2f{ .x = 200, .y = 300 }, 24, col);
+    try alka.drawTextPoint(0, 'L', Vec2f{ .x = 200 + 15, .y = 300 }, 24, col);
+    try alka.drawTextPoint(0, 'K', Vec2f{ .x = 200 + 15 * 2, .y = 300 }, 24, col);
+    try alka.drawTextPoint(0, 'A', Vec2f{ .x = 200 + 15 * 3, .y = 300 }, 24, col);
+
+    try alka.drawText(0, "Hello World!", Vec2f{ .x = 100, .y = 500 }, 48, col);
 }
 
 pub fn main() !void {
@@ -56,7 +61,7 @@ pub fn main() !void {
     const texture = try core.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);
     try alka.getAssetManager().loadTexturePro(2, texture);
 
-    try alka.getAssetManager().loadFont(0, "assets/arial.ttf", 50);
+    try alka.getAssetManager().loadFont(0, "assets/arial.ttf", 128);
 
     try alka.open();
     try alka.update();

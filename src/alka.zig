@@ -30,6 +30,7 @@ const gl = @import("core/gl.zig");
 const input = @import("core/input.zig");
 const window = @import("core/window.zig");
 const m = @import("core/math/math.zig");
+const utf8 = @import("core/utf8.zig");
 const pr = @import("private.zig");
 
 usingnamespace @import("core/log.zig");
@@ -237,7 +238,7 @@ pub fn getDebug() ![]u8 {
     if (!pengineready) return Error.EngineIsNotInitialized;
     var buffer: []u8 = try p.alloc.alloc(u8, 255);
 
-    buffer = try std.fmt.bufPrintZ(buffer, "update: {}\tdraw: {}\tdelta: {}\tfps: {}", .{ p.frametime.update, p.frametime.draw, p.frametime.delta, p.fps.fps });
+    buffer = try std.fmt.bufPrintZ(buffer, "update: {d}\tdraw: {d}\tdelta: {d}\tfps: {}", .{ p.frametime.update, p.frametime.draw, p.frametime.delta, p.fps.fps });
     return buffer;
 }
 
@@ -478,7 +479,7 @@ pub fn drawTextureAdv(texture_id: u64, rect: m.Rectangle, srect: m.Rectangle, or
 }
 
 /// Draws a given codepoint from the font
-pub fn drawTextPoint(font_id: u64, codepoint: u64, position: m.Vec2f, psize: f32, colour: Colour) Error!void {
+pub fn drawTextPoint(font_id: u64, codepoint: i32, position: m.Vec2f, psize: f32, colour: Colour) Error!void {
     const shader = try p.assetmanager.getShader(pr.embed.default_shader.id);
     const font = try p.assetmanager.getFont(font_id);
 
@@ -491,4 +492,46 @@ pub fn drawTextPoint(font_id: u64, codepoint: u64, position: m.Vec2f, psize: f32
 
     const i = @intCast(usize, batch.id);
     return pr.submitFontPointQuad(i, font_id, codepoint, position, psize, colour);
+}
+
+/// Draws the given string from the font
+pub fn drawText(font_id: u64, string: []const u8, position: m.Vec2f, psize: f32, colour: Colour) Error!void {
+    const spacing: f32 = 1;
+    const shader = try p.assetmanager.getShader(pr.embed.default_shader.id);
+    const font = try p.assetmanager.getFont(font_id);
+
+    const batch = getBatch(gl.DrawMode.triangles, shader, font.texture) catch |err| {
+        if (err == Error.InvalidBatch) {
+            _ = try createBatch(gl.DrawMode.triangles, shader, font.texture);
+            return try drawText(font_id, string, position, psize, colour);
+        } else return err;
+    };
+
+    var offx: f32 = 0;
+    var offy: f32 = 0;
+    const scale_factor: f32 = psize / @intToFloat(f32, font.base_size);
+
+    var i: usize = 0;
+    while (i < string.len) {
+        var codepointbytec: i32 = 0;
+        var codepoint: i32 = utf8.nextCodepoint(string[i..], &codepointbytec);
+        const index: usize = @intCast(usize, font.glyphIndex(codepoint));
+
+        if (codepoint == 0x3f) codepointbytec = 1;
+
+        if (codepoint == '\n') {
+            offy += @intToFloat(f32, (font.base_size + @divTrunc(font.base_size, 2))) * scale_factor;
+            offx = 0;
+        } else {
+            if ((codepoint != ' ') and (codepoint != '\t')) {
+                try drawTextPoint(font_id, codepoint, m.Vec2f{ .x = position.x + offx, .y = position.y + offy }, psize, colour);
+            }
+
+            if (font.glyphs[index].advance == 0) {
+                offx += font.rects[index].size.x * scale_factor + spacing;
+            } else offx += @intToFloat(f32, font.glyphs[index].advance) * scale_factor + spacing;
+        }
+
+        i += @intCast(usize, codepointbytec);
+    }
 }
