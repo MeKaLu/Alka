@@ -20,8 +20,11 @@ pub fn main() !void {
 
     try alka.init(callbacks, 1024, 768, "Basic Setup", 0, false, &gpa.allocator);
 
+    // opens the window
     try alka.open();
+    // runs the loop
     try alka.update();
+    // closes the window
     try alka.close();
 
     try alka.deinit();

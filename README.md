@@ -4,7 +4,7 @@ Game engine written in zig, compatible with **master branch**.
 You may need these to compile the engine
 `sudo apt install libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl-dev`
 
-Get started [work in progress]()
+Get started [now](https://github.com/Kiakra/Alka/blob/master/get-started.md)
 
 [Documentation]()
 
