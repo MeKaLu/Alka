@@ -58,7 +58,7 @@ pub fn main() !void {
     const texture = try core.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);
     try alka.getAssetManager().loadTexturePro(2, texture);
 
-    var font = try core.renderer.Font.createFromTTF(&gpa.allocator, "assets/arial.ttf", null, 24);
+    var font = try core.renderer.Font.createFromTTF(&gpa.allocator, "assets/arial.ttf", null, 50);
     try alka.getAssetManager().loadTexturePro(3, font.texture);
 
     try alka.open();

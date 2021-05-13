@@ -281,7 +281,7 @@ pub const Texture = struct {
         return result;
     }
 
-    /// Creates a texture from TTF font file with given string
+    /// Creates a basic texture from TTF font file with given string
     pub fn createFromTTF(alloc: *std.mem.Allocator, filepath: []const u8, string: []const u8, w: i32, h: i32, lineh: i32) Error!Texture {
         var result = Texture{ .width = w, .height = h };
         loadSetup(&result);
@@ -509,8 +509,7 @@ pub const Font = struct {
                     } else {
                         px[j] = 255;
                     }
-                }
-                if (chars[i].raw.rpixels) |px| {
+                } else if (chars[i].raw.rpixels) |px| {
                     if (px[j] < bitmap_alpha_threshold) {
                         px[j] = 0;
                     } else {
@@ -547,14 +546,14 @@ pub const Font = struct {
                 required_area += @intToFloat(f32, ((chars[i].raw.width + 2 * padding) * (chars[i].raw.height + 2 * padding)));
             }
             var guess_size = @sqrt(required_area) * 1.3;
-            var v2: f32 = 2;
+            var v2: f32 = 2; // compiler bug
             var image_size = @floatToInt(i32, std.math.pow(f32, 2, @ceil(@log(guess_size) / @log(v2)))); // calculate next POT
 
             atlasw = image_size;
             atlash = image_size;
             atlas = alloc.alloc(u8, @intCast(usize, atlasw * atlash)) catch return Error.FailedToGenerateAtlas;
             i = 0;
-            while (i < chars.len) : (i += 1) {
+            while (i < atlasw * atlash) : (i += 1) {
                 atlas[i] = 0;
             }
         }
@@ -594,15 +593,9 @@ pub const Font = struct {
                     var x: usize = 0;
                     while (x < chars[i].raw.width) : (x += 1) {
                         if (chars[i].raw.pixels) |px| {
-                            //alog.notice("px{}", .{i});
-
                             const index = @intCast(usize, (rects[i].y + padding + @intCast(i32, y)) * atlasw + (rects[i].x + padding + @intCast(i32, x)));
                             atlas[index] = px[y * @intCast(usize, chars[i].raw.width) + x];
-                        }
-                        if (chars[i].raw.rpixels) |px| {
-                            if (px == null) continue; // ???
-                            //alog.notice("rpx{}", .{i});
-
+                        } else if (chars[i].raw.rpixels) |px| {
                             const index = @intCast(usize, (rects[i].y + padding + @intCast(i32, y)) * atlasw + (rects[i].x + padding + @intCast(i32, x)));
                             atlas[index] = px[y * @intCast(usize, chars[i].raw.width) + x];
                         }
@@ -648,13 +641,13 @@ pub const Font = struct {
 
         gl.texturesGen(1, @ptrCast([*]u32, &result.texture.id));
         gl.textureBind(gl.TextureType.t2D, result.texture.id);
+        defer gl.textureBind(gl.TextureType.t2D, 0);
 
         gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.min_filter, gl.TextureParamater.filter_nearest);
-        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.mag_filter, gl.TextureParamater.filter_nearest);
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.mag_filter, gl.TextureParamater.filter_linear);
 
         gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_s, gl.TextureParamater.wrap_repeat);
         gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_t, gl.TextureParamater.wrap_repeat);
-        defer gl.textureBind(gl.TextureType.t2D, 0);
 
         if (atlas.pixels) |pixels| {
             gl.textureTexImage2D(gl.TextureType.t2D, 0, gl.TextureFormat.rg8, result.texture.width, result.texture.height, 0, gl.TextureFormat.rg, u8, @ptrCast(?*c_void, pixels));
