@@ -1,5 +1,5 @@
 # Examples
-More on [examples](https://github.com/Kiakra/Kiragine/tree/master/examples)
+More on [examples](https://github.com/Kiakra/Alka/tree/master/examples)
 
 ## How to compile?
 
