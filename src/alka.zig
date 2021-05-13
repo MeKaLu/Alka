@@ -252,7 +252,7 @@ pub fn getInput() *input.Info {
 }
 
 /// Returns the mouse pos
-pub fn getMouse() m.Vec2f {
+pub fn getMousePosition() m.Vec2f {
     return p.mousep;
 }
 

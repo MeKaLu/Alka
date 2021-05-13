@@ -488,21 +488,29 @@ pub fn submitFontPointQuad(i: usize, font_id: u64, codepoint: u64, position: m.V
 
     // zig fmt: off
     const rect = m.Rectangle{ 
-    .position = .{ .x = position.x + @intToFloat(f32, font.glyphs[index].offx) * scale_factor - @intToFloat(f32, font.glyph_padding) * scale_factor, 
-        .y = position.y + @intToFloat(f32, font.glyphs[index].offy) * scale_factor - @intToFloat(f32, font.glyph_padding) * scale_factor }, 
-    .size = .{ .x = (font.rects[index].size.x + 2 * @intToFloat(f32, font.glyph_padding)) * scale_factor, 
-        .y = (font.rects[index].size.y + 2 * @intToFloat(f32, font.glyph_padding)) * scale_factor } 
+    .position = 
+        .{ 
+            .x = position.x + @intToFloat(f32, font.glyphs[index].offx) * scale_factor - @intToFloat(f32, font.glyph_padding) * scale_factor, 
+            .y = position.y + @intToFloat(f32, font.glyphs[index].offy) * scale_factor - @intToFloat(f32, font.glyph_padding) * scale_factor 
+        }, 
+    .size = 
+        .{ 
+            .x = (font.rects[index].size.x + 2 * @intToFloat(f32, font.glyph_padding)) * scale_factor, 
+            .y = (font.rects[index].size.y + 2 * @intToFloat(f32, font.glyph_padding)) * scale_factor 
+        } 
     };
 
+    const src = m.Rectangle{ 
+        .position = m.Vec2f{
+            .x = font.rects[index].position.x - @intToFloat(f32, font.glyph_padding),
+            .y = font.rects[index].position.y - @intToFloat(f32, font.glyph_padding),
+        }, 
+        .size = m.Vec2f{
+            .x = font.rects[index].size.x + 2 * @intToFloat(f32, font.glyph_padding),
+            .y = font.rects[index].size.y + 2 * @intToFloat(f32, font.glyph_padding),
+        } 
+    };
     // zig fmt: on
-
-    const src = m.Rectangle{ .position = m.Vec2f{
-        .x = font.rects[index].position.x - @intToFloat(f32, font.glyph_padding),
-        .y = font.rects[index].position.y - @intToFloat(f32, font.glyph_padding),
-    }, .size = m.Vec2f{
-        .x = font.rects[index].size.x + 2 * @intToFloat(f32, font.glyph_padding),
-        .y = font.rects[index].size.y + 2 * @intToFloat(f32, font.glyph_padding),
-    } };
 
     const pos0 = m.Vec2f{ .x = rect.position.x, .y = rect.position.y };
     const pos1 = m.Vec2f{ .x = rect.position.x + rect.size.x, .y = rect.position.y };

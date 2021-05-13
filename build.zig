@@ -9,8 +9,48 @@ pub fn build(b: *Builder) void {
 
     lib.strip = b.option(bool, "strip", "Strip the exe?") orelse false;
 
-    {
-        const exe = lib.setup(b, target, "game", "src/main.zig", "./");
+    const examples = b.option(bool, "examples", "Compile the examples?") orelse false;
+    const main = b.option(bool, "main", "Compile the main source?") orelse false;
+
+    if (examples) {
+        {
+            const exe = lib.setupWithStatic(b, target, "basic_setup", "examples/basic_setup.zig", "./");
+            exe.setOutputDir("build");
+            exe.setBuildMode(mode);
+            exe.install();
+        }
+
+        {
+            const exe = lib.setupWithStatic(b, target, "input", "examples/input.zig", "./");
+            exe.setOutputDir("build");
+            exe.setBuildMode(mode);
+            exe.install();
+        }
+
+        {
+            const exe = lib.setupWithStatic(b, target, "shape_drawing", "examples/shape_drawing.zig", "./");
+            exe.setOutputDir("build");
+            exe.setBuildMode(mode);
+            exe.install();
+        }
+
+        {
+            const exe = lib.setupWithStatic(b, target, "texture_drawing", "examples/texture_drawing.zig", "./");
+            exe.setOutputDir("build");
+            exe.setBuildMode(mode);
+            exe.install();
+        }
+
+        {
+            const exe = lib.setupWithStatic(b, target, "font_drawing", "examples/font_drawing.zig", "./");
+            exe.setOutputDir("build");
+            exe.setBuildMode(mode);
+            exe.install();
+        }
+    }
+
+    if (main) {
+        const exe = lib.setup(b, target, "main", "src/main.zig", "./");
         exe.setOutputDir("build");
         exe.setBuildMode(mode);
         exe.install();
