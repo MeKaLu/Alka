@@ -70,18 +70,16 @@ fn draw() !void {
         // custom batch forces to use drawmode: triangles, so it'll be filled rectangle
         try alka.drawRectangleLinesAdv(r, m.Vec2f{ .x = 25, .y = 25 }, m.deg2radf(45), col);
 
-        const r2 = m.Rectangle{ .position = m.Vec2f{ .x = 200.0, .y = 200.0 }, .size = m.Vec2f{ .x = 30.0, .y = 30.0 } };
-        const col2 = alka.Colour.rgba(30, 80, 200, 255);
-
-        try alka.drawRectangle(r2, col2);
-        //try alka.drawRectangleLines(r2, col2);
-
         // there is also a 2dcamera in unique to every batch,
         // the alka.getCamera2D() is the global camera which every batch defaults for, every frame
         batch.cam2d.zoom.x = 0.5;
     }
     // pop the batch
     alka.popBatch();
+
+    const r2 = m.Rectangle{ .position = m.Vec2f{ .x = 200.0, .y = 200.0 }, .size = m.Vec2f{ .x = 30.0, .y = 30.0 } };
+    const col2 = alka.Colour.rgba(30, 80, 200, 255);
+    try alka.drawRectangle(r2, col2);
 }
 
 pub fn main() !void {
