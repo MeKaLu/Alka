@@ -40,6 +40,11 @@ pub fn main() !void {
 
     // id, path
     try alka.getAssetManager().loadTexture(1, "assets/test.png");
+    {
+        const texture = try alka.getAssetManager().getTexture(1);
+        // min, mag
+        texture.setFilter(core.gl.TextureParamater.filter_nearest, core.gl.TextureParamater.filter_nearest);
+    }
 
     // or
     {

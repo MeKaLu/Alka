@@ -14,7 +14,7 @@ Get started [now](https://github.com/Kiakra/Alka/blob/master/get-started.md)
 - [x] Asset manager
 - [ ] Custom batch system 
 - [x] 2D Camera
-- [ ] 2D Shape drawing
+- [X] 2D Shape drawing
 - [x] 2D Texture drawing
 - [x] 2D Text drawing 
 - [ ] GUI system

@@ -50,11 +50,16 @@ pub fn main() !void {
 
     // .. bitmap width & height, pixel size
     const texture = try core.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);
+    // min, mag
+    texture.setFilter(core.gl.TextureParamater.filter_mipmap_nearest, core.gl.TextureParamater.filter_linear);
     // id, texture
     try alka.getAssetManager().loadTexturePro(1, texture); // texture 0 & shader 0 is reserved for defaults
 
     // id, path, pixel size
     try alka.getAssetManager().loadFont(0, "assets/arial.ttf", 128);
+    const font = try alka.getAssetManager().getFont(0);
+    // min, mag
+    font.texture.setFilter(core.gl.TextureParamater.filter_mipmap_nearest, core.gl.TextureParamater.filter_linear);
 
     try alka.open();
     try alka.update();

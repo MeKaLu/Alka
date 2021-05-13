@@ -28,7 +28,7 @@ const std = @import("std");
 const c = @import("c.zig");
 const gl = @import("gl.zig");
 const fs = @import("fs.zig");
-usingnamespace @import("math/math.zig");
+const m = @import("math/math.zig");
 usingnamespace @import("log.zig");
 
 const alog = std.log.scoped(.alka_core_renderer);
@@ -91,7 +91,7 @@ pub const UColour = ColourGeneric(u8);
 
 /// Vertex generic struct
 pub fn VertexGeneric(istextcoord: bool, comptime positiontype: type) type {
-    if (positiontype == Vec2f or positiontype == Vec3f) {
+    if (positiontype == m.Vec2f or positiontype == m.Vec3f) {
         if (!istextcoord) {
             return struct {
                 const Self = @This();
@@ -102,7 +102,7 @@ pub fn VertexGeneric(istextcoord: bool, comptime positiontype: type) type {
         return struct {
             const Self = @This();
             position: positiontype = positiontype{},
-            texcoord: Vec2f = Vec2f{},
+            texcoord: m.Vec2f = m.Vec2f{},
             colour: Colour = comptime Colour.rgba(255, 255, 255, 255)
         };
     }
@@ -245,7 +245,7 @@ pub const Texture = struct {
         gl.textureBind(gl.TextureType.t2D, self.id);
 
         gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.min_filter, gl.TextureParamater.filter_nearest);
-        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.mag_filter, gl.TextureParamater.filter_nearest);
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.mag_filter, gl.TextureParamater.filter_linear);
 
         gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_s, gl.TextureParamater.wrap_repeat);
         gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_t, gl.TextureParamater.wrap_repeat);
@@ -390,6 +390,15 @@ pub const Texture = struct {
         return result;
     }
 
+    /// Changes the filter of the texture
+    pub fn setFilter(self: Texture, comptime min: gl.TextureParamater, comptime mag: gl.TextureParamater) void {
+        gl.textureBind(gl.TextureType.t2D, self.id);
+        defer gl.textureBind(gl.TextureType.t2D, 0);
+
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.min_filter, min);
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.mag_filter, mag);
+    }
+
     /// Destroys the texture
     pub fn destroy(self: *Texture) void {
         gl.texturesDelete(1, @ptrCast([*]const u32, &self.id));
@@ -414,7 +423,7 @@ pub const Font = struct {
     alloc: *std.mem.Allocator = undefined,
 
     texture: Texture = undefined,
-    rects: []Rectangle = undefined,
+    rects: []m.Rectangle = undefined,
     glyphs: []Glyph = undefined,
 
     base_size: i32 = undefined,
@@ -532,7 +541,7 @@ pub const Font = struct {
         const fontsize = self.base_size;
         const padding = self.glyph_padding;
 
-        self.rects = alloc.alloc(Rectangle, chars.len) catch return Error.FailedToGenerateAtlas;
+        self.rects = alloc.alloc(m.Rectangle, chars.len) catch return Error.FailedToGenerateAtlas;
 
         // Calculate image size based on required pixel area
         // NOTE 1: Image is forced to be squared and POT... very conservative!
@@ -652,7 +661,7 @@ pub const Font = struct {
         gl.textureBind(gl.TextureType.t2D, result.texture.id);
         defer gl.textureBind(gl.TextureType.t2D, 0);
 
-        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.min_filter, gl.TextureParamater.filter_mipmap_linear);
+        gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.min_filter, gl.TextureParamater.filter_nearest);
         gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.mag_filter, gl.TextureParamater.filter_linear);
 
         gl.textureTexParameteri(gl.TextureType.t2D, gl.TextureParamaterType.wrap_s, gl.TextureParamater.wrap_repeat);
