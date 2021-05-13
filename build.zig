@@ -54,6 +54,13 @@ pub fn build(b: *Builder) void {
             exe.setBuildMode(mode);
             exe.install();
         }
+
+        {
+            const exe = lib.setupWithStatic(b, target, "custombatch", "examples/custombatch.zig", "./");
+            exe.setOutputDir("build");
+            exe.setBuildMode(mode);
+            exe.install();
+        }
     }
 
     if (main) {

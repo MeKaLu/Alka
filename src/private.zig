@@ -137,7 +137,7 @@ pub const AssetManager = struct {
         var i: u64 = 0;
         while (i < self.shaders.items.len) : (i += 1) {
             if (self.shaders.items[i].id) |id| {
-                alog.notice("shader({}) destroyed!", .{id});
+                alog.notice("shader(id: {}) destroyed!", .{id});
                 gl.shaderProgramDelete(self.shaders.items[i].data);
                 self.shaders.items[i].id = null;
             }
@@ -145,7 +145,7 @@ pub const AssetManager = struct {
         i = 0;
         while (i < self.textures.items.len) : (i += 1) {
             if (self.textures.items[i].id) |id| {
-                alog.notice("texture({}) destroyed!", .{id});
+                alog.notice("texture(id: {}) destroyed!", .{id});
                 self.textures.items[i].data.destroy();
                 self.textures.items[i].id = null;
             }
@@ -153,7 +153,7 @@ pub const AssetManager = struct {
         i = 0;
         while (i < self.fonts.items.len) : (i += 1) {
             if (self.fonts.items[i].id) |id| {
-                alog.notice("font({}) destroyed!", .{id});
+                alog.notice("font(id: {}) destroyed!", .{id});
                 self.fonts.items[i].data.destroy();
                 self.fonts.items[i].id = null;
             }
@@ -190,7 +190,7 @@ pub const AssetManager = struct {
 
     pub fn loadShader(self: *AssetManager, id: u64, vertex: []const u8, fragment: []const u8) Error!void {
         if (self.isShaderExists(id)) {
-            alog.err("shader({}) already exists!", .{id});
+            alog.err("shader(id: {}) already exists!", .{id});
             return Error.AlreadyExists;
         }
         const program = try gl.shaderProgramCreate(self.alloc, vertex, fragment);
@@ -198,7 +198,7 @@ pub const AssetManager = struct {
             .id = id,
             .data = program,
         });
-        alog.notice("shader({}) loaded!", .{id});
+        alog.notice("shader(id: {}) loaded!", .{id});
     }
 
     pub fn loadTexture(self: *AssetManager, id: u64, path: []const u8) Error!void {
@@ -211,11 +211,11 @@ pub const AssetManager = struct {
 
     pub fn loadTexturePro(self: *AssetManager, id: u64, texture: renderer.Texture) Error!void {
         if (self.isTextureExists(id)) {
-            alog.err("texture({}) already exists!", .{id});
+            alog.err("texture(id: {}) already exists!", .{id});
             return Error.AlreadyExists;
         }
         try self.textures.append(.{ .id = id, .data = texture });
-        alog.notice("texture({}) loaded!", .{id});
+        alog.notice("texture(id: {}) loaded!", .{id});
     }
 
     pub fn loadFont(self: *AssetManager, id: u64, path: []const u8, pixelsize: i32) Error!void {
@@ -224,19 +224,19 @@ pub const AssetManager = struct {
 
     pub fn loadFontPro(self: *AssetManager, id: u64, font: renderer.Font) Error!void {
         if (self.isFontExists(id)) {
-            alog.err("font({}) already exists!", .{id});
+            alog.err("font(id: {}) already exists!", .{id});
             return Error.AlreadyExists;
         }
         try self.fonts.append(.{ .id = id, .data = font });
-        alog.notice("font({}) loaded!", .{id});
+        alog.notice("font(id: {}) loaded!", .{id});
     }
 
     pub fn unloadShader(self: *AssetManager, id: u64) Error!void {
         if (!self.isShaderExists(id)) {
-            alog.warn("shader({}) does not exists!", .{id});
+            alog.warn("shader(id: {}) does not exists!", .{id});
             return;
         } else if (id == 0) {
-            alog.warn("shader({}) is provided by the engine! It is not meant to unload manually!", .{id});
+            alog.warn("shader(id: {}) is provided by the engine! It is not meant to unload manually!", .{id});
             return;
         }
         const i = try self.findShader(id);
@@ -246,10 +246,10 @@ pub const AssetManager = struct {
 
     pub fn unloadTexture(self: *AssetManager, id: u64) Error!void {
         if (!self.isTextureExists(id)) {
-            alog.warn("texture({}) does not exists!", .{id});
+            alog.warn("texture(id: {}) does not exists!", .{id});
             return;
         } else if (id == 0) {
-            alog.warn("texture({}) is provided by the engine! It is not meant to unload manually!", .{id});
+            alog.warn("texture(id: {}) is provided by the engine! It is not meant to unload manually!", .{id});
             return;
         }
         const i = try self.findTexture(id);
@@ -259,10 +259,10 @@ pub const AssetManager = struct {
 
     pub fn unloadFont(self: *AssetManager, id: u64) Error!void {
         if (!self.isFontExists(id)) {
-            alog.warn("font({}) does not exists!", .{id});
+            alog.warn("font(id: {}) does not exists!", .{id});
             return;
         } else if (id == 0) {
-            alog.warn("font({}) is provided by the engine! It is not meant to unload manually!", .{id});
+            alog.warn("font(id: {}) is provided by the engine! It is not meant to unload manually!", .{id});
             return;
         }
         const i = try self.findFont(id);
@@ -273,7 +273,7 @@ pub const AssetManager = struct {
     pub fn getShader(self: AssetManager, id: u64) Error!u32 {
         const i = self.findShader(id) catch |err| {
             if (err == Error.InvalidId) {
-                alog.warn("shader({}) does not exists!", .{id});
+                alog.warn("shader(id: {}) does not exists!", .{id});
                 return Error.InvalidId;
             } else return err;
         };
@@ -283,7 +283,7 @@ pub const AssetManager = struct {
     pub fn getTexture(self: AssetManager, id: u64) Error!renderer.Texture {
         const i = self.findTexture(id) catch |err| {
             if (err == Error.InvalidId) {
-                alog.warn("texture({}) does not exists!", .{id});
+                alog.warn("texture(id: {}) does not exists!", .{id});
                 return Error.InvalidId;
             } else return err;
         };
@@ -293,7 +293,7 @@ pub const AssetManager = struct {
     pub fn getFont(self: AssetManager, id: u64) Error!renderer.Font {
         const i = self.findFont(id) catch |err| {
             if (err == Error.InvalidId) {
-                alog.warn("font({}) does not exists!", .{id});
+                alog.warn("font(id: {}) does not exists!", .{id});
                 return Error.InvalidId;
             } else return err;
         };
@@ -311,6 +311,7 @@ pub const Private = struct {
     defaults: Temp = undefined,
     current: Temp = undefined,
 
+    force_batch: ?usize = null,
     batch_counter: usize = 0,
     batchs: []Batch = undefined,
 

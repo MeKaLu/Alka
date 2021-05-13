@@ -7,6 +7,36 @@ usingnamespace core.log;
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;
 
+const vertex_shader =
+    \\#version 330 core
+    \\layout (location = 0) in vec2 aPos;
+    \\layout (location = 1) in vec2 aTexCoord;
+    \\layout (location = 2) in vec4 aColour;
+    \\
+    \\out vec2 ourTexCoord;
+    \\out vec4 ourColour;
+    \\uniform mat4 MVP;
+    \\
+    \\void main() {
+    \\  gl_Position = MVP * vec4(aPos.xy, 0.0, 1.0);
+    \\  ourTexCoord = aTexCoord;
+    \\  ourColour = aColour;
+    \\}
+;
+
+const fragment_shader =
+    \\#version 330 core
+    \\out vec4 final;
+    \\in vec2 ourTexCoord;
+    \\in vec4 ourColour;
+    \\uniform sampler2D uTexture;
+    \\
+    \\void main() {
+    \\  vec4 texelColour = texture(uTexture, ourTexCoord);
+    \\  final = vec4(1, 0, 0, 1) * texelColour; // everything is red
+    \\}
+;
+
 fn update(dt: f32) !void {
     const debug = try alka.getDebug();
     defer alka.getAllocator().free(debug);
@@ -15,23 +45,24 @@ fn update(dt: f32) !void {
 
 fn draw() !void {
     var asset = alka.getAssetManager();
-    const defshader = try asset.getShader(0);
+    const shader = try asset.getShader(1);
     const deftexture = try asset.getTexture(0);
     const testpng = try asset.getTexture(1);
     const staticfont = try asset.getTexture(2);
     const font = try asset.getFont(0);
-
-    //var batch = try alka.createBatch(core.gl.DrawMode.triangles, defshader, deftexture);
-
     const col = alka.Colour{ .r = 1, .g = 1, .b = 1, .a = 1 };
 
-    // start, end, thickness, colour
-    try alka.drawLine(Vec2f{ .x = 300, .y = 300 }, Vec2f{ .x = 400, .y = 350 }, 1, col);
+    var batch = try alka.createBatch(core.gl.DrawMode.triangles, shader, deftexture);
 
+    alka.pushBatch(batch);
     const r = Rectangle{ .position = Vec2f{ .x = 100.0, .y = 200.0 }, .size = Vec2f{ .x = 50.0, .y = 50.0 } };
     //try alka.drawRectangleAdv(r, Vec2f{ .x = 25, .y = 25 }, deg2radf(45), col);
     try alka.drawRectangleLinesAdv(r, Vec2f{ .x = 25, .y = 25 }, deg2radf(45), col);
     //try alka.drawRectangleLines(r, col);
+    alka.popBatch();
+
+    // start, end, thickness, colour
+    try alka.drawLine(Vec2f{ .x = 300, .y = 300 }, Vec2f{ .x = 400, .y = 350 }, 1, col);
 
     const r2 = Rectangle{ .position = Vec2f{ .x = 200.0, .y = 200.0 }, .size = Vec2f{ .x = 500.0, .y = 500.0 } };
     const rs2 = Rectangle{ .position = Vec2f{ .x = 0.0, .y = 0.0 }, .size = Vec2f{ .x = @intToFloat(f32, staticfont.width), .y = @intToFloat(f32, staticfont.height) } };
@@ -65,6 +96,7 @@ pub fn main() !void {
 
     try alka.init(callbacks, 1024, 768, "title go brrr", 0, false, &gpa.allocator);
 
+    try alka.getAssetManager().loadShader(1, vertex_shader, fragment_shader);
     try alka.getAssetManager().loadTexture(1, "assets/test.png");
 
     const texture = try core.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);

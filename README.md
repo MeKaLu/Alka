@@ -12,7 +12,7 @@ Get started [now](https://github.com/Kiakra/Alka/blob/master/get-started.md)
 - [x] Single window operations
 - [x] Input management
 - [x] Asset manager
-- [ ] Custom batch system 
+- [x] Custom batch system 
 - [x] 2D Camera
 - [X] 2D Shape drawing
 - [x] 2D Texture drawing
