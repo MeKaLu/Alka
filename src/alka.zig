@@ -337,9 +337,12 @@ pub fn renderBatch(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Error!
 
 /// Draws a basic rectangle
 pub fn drawRectangle(rect: m.Rectangle, colour: Colour) Error!void {
-    const batch = getBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(pr.embed.white_texture_id)) catch |err| {
+    const shader = try p.assetmanager.getShader(pr.embed.default_shader.id);
+    const white_texture = try p.assetmanager.getTexture(pr.embed.white_texture_id);
+
+    const batch = getBatch(gl.DrawMode.triangles, shader, white_texture) catch |err| {
         if (err == Error.InvalidBatch) {
-            _ = try createBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(pr.embed.white_texture_id));
+            _ = try createBatch(gl.DrawMode.triangles, shader, white_texture);
             return try drawRectangle(rect, colour);
         } else return err;
     };
@@ -362,18 +365,21 @@ pub fn drawRectangle(rect: m.Rectangle, colour: Colour) Error!void {
         if (err == Error.ObjectOverflow) {
             try pr.drawBatch(i);
             try pr.cleanBatch(i);
-
-            try p.batchs[i].data.submitDrawable(vx);
             alog.notice("batch(id: {}) flushed!", .{i});
+
+            return p.batchs[i].data.submitDrawable(vx);
         } else return err;
     };
 }
 
 /// Draws a rectangle, angle should be in radians
 pub fn drawRectangleAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: Colour) Error!void {
-    const batch = getBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(pr.embed.white_texture_id)) catch |err| {
+    const shader = try p.assetmanager.getShader(pr.embed.default_shader.id);
+    const white_texture = try p.assetmanager.getTexture(pr.embed.white_texture_id);
+
+    const batch = getBatch(gl.DrawMode.triangles, shader, white_texture) catch |err| {
         if (err == Error.InvalidBatch) {
-            _ = try createBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(pr.embed.white_texture_id));
+            _ = try createBatch(gl.DrawMode.triangles, shader, white_texture);
             return try drawRectangleAdv(rect, origin, angle, colour);
         } else return err;
     };
@@ -408,18 +414,21 @@ pub fn drawRectangleAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: 
         if (err == Error.ObjectOverflow) {
             try pr.drawBatch(i);
             try pr.cleanBatch(i);
-
-            try p.batchs[i].data.submitDrawable(vx);
             alog.notice("batch(id: {}) flushed!", .{i});
+
+            return p.batchs[i].data.submitDrawable(vx);
         } else return err;
     };
 }
 
 /// Draws a texture
 pub fn drawTexture(texture_id: u64, rect: m.Rectangle, srect: m.Rectangle, colour: Colour) Error!void {
-    const batch = getBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(texture_id)) catch |err| {
+    const shader = try p.assetmanager.getShader(pr.embed.default_shader.id);
+    const texture = try p.assetmanager.getTexture(texture_id);
+
+    const batch = getBatch(gl.DrawMode.triangles, shader, texture) catch |err| {
         if (err == Error.InvalidBatch) {
-            _ = try createBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(texture_id));
+            _ = try createBatch(gl.DrawMode.triangles, shader, texture);
             return try drawTexture(texture_id, rect, srect, colour);
         } else return err;
     };
@@ -431,14 +440,17 @@ pub fn drawTexture(texture_id: u64, rect: m.Rectangle, srect: m.Rectangle, colou
     const pos2 = m.Vec2f{ .x = rect.position.x + rect.size.x, .y = rect.position.y + rect.size.y };
     const pos3 = m.Vec2f{ .x = rect.position.x, .y = rect.position.y + rect.size.y };
 
-    try pr.submitTextureQuad(i, pos0, pos1, pos2, pos3, srect, colour);
+    return pr.submitTextureQuad(i, pos0, pos1, pos2, pos3, srect, colour);
 }
 
 /// Draws a texture, angle should be in radians
 pub fn drawTextureAdv(texture_id: u64, rect: m.Rectangle, srect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: Colour) Error!void {
-    const batch = getBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(texture_id)) catch |err| {
+    const shader = try p.assetmanager.getShader(pr.embed.default_shader.id);
+    const texture = try p.assetmanager.getTexture(texture_id);
+
+    const batch = getBatch(gl.DrawMode.triangles, shader, texture) catch |err| {
         if (err == Error.InvalidBatch) {
-            _ = try createBatch(gl.DrawMode.triangles, try p.assetmanager.getShader(pr.embed.default_shader.id), try p.assetmanager.getTexture(texture_id));
+            _ = try createBatch(gl.DrawMode.triangles, shader, texture);
             return try drawTextureAdv(texture_id, rect, srect, origin, angle, colour);
         } else return err;
     };
@@ -462,5 +474,21 @@ pub fn drawTextureAdv(texture_id: u64, rect: m.Rectangle, srect: m.Rectangle, or
     const pos2 = m.Vec2f{ .x = rect.position.x + r2.x, .y = rect.position.y + r2.y };
     const pos3 = m.Vec2f{ .x = rect.position.x + r3.x, .y = rect.position.y + r3.y };
 
-    try pr.submitTextureQuad(i, pos0, pos1, pos2, pos3, srect, colour);
+    return pr.submitTextureQuad(i, pos0, pos1, pos2, pos3, srect, colour);
+}
+
+/// Draws a given codepoint from the font
+pub fn drawTextPoint(font_id: u64, codepoint: u64, position: m.Vec2f, psize: f32, colour: Colour) Error!void {
+    const shader = try p.assetmanager.getShader(pr.embed.default_shader.id);
+    const font = try p.assetmanager.getFont(font_id);
+
+    const batch = getBatch(gl.DrawMode.triangles, shader, font.texture) catch |err| {
+        if (err == Error.InvalidBatch) {
+            _ = try createBatch(gl.DrawMode.triangles, shader, font.texture);
+            return try drawTextPoint(font_id, codepoint, position, psize, colour);
+        } else return err;
+    };
+
+    const i = @intCast(usize, batch.id);
+    return pr.submitFontPointQuad(i, font_id, codepoint, position, psize, colour);
 }

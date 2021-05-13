@@ -18,8 +18,8 @@ fn draw() !void {
     const defshader = try asset.getShader(0);
     const deftexture = try asset.getTexture(0);
     const testpng = try asset.getTexture(1);
-    const ttf = try asset.getTexture(2);
-    const font = try asset.getTexture(3);
+    const staticfont = try asset.getTexture(2);
+    const font = try asset.getFont(0);
 
     //var batch = try alka.createBatch(core.gl.DrawMode.triangles, defshader, deftexture);
 
@@ -30,14 +30,12 @@ fn draw() !void {
     try alka.drawRectangleAdv(r, Vec2f{ .x = 25, .y = 25 }, deg2radf(45), col);
 
     const r2 = Rectangle{ .position = Vec2f{ .x = 200.0, .y = 200.0 }, .size = Vec2f{ .x = 500.0, .y = 500.0 } };
-    const rs2 = Rectangle{ .position = Vec2f{ .x = 0.0, .y = 0.0 }, .size = Vec2f{ .x = @intToFloat(f32, ttf.width), .y = @intToFloat(f32, ttf.height) } };
+    const rs2 = Rectangle{ .position = Vec2f{ .x = 0.0, .y = 0.0 }, .size = Vec2f{ .x = @intToFloat(f32, staticfont.width), .y = @intToFloat(f32, staticfont.height) } };
     //try alka.drawTexture(1, r2, rs2, col);
 
     try alka.drawTexture(2, r2, rs2, col);
 
-    const r3 = Rectangle{ .position = Vec2f{ .x = 200.0, .y = 300.0 }, .size = Vec2f{ .x = @intToFloat(f32, font.width), .y = @intToFloat(f32, font.height) } };
-    const rs3 = Rectangle{ .position = Vec2f{ .x = 0.0, .y = 0.0 }, .size = Vec2f{ .x = @intToFloat(f32, font.width), .y = @intToFloat(f32, font.height) } };
-    try alka.drawTexture(3, r3, rs3, col);
+    try alka.drawTextPoint(0, 'A', Vec2f{ .x = 200, .y = 300 }, 24, col);
 }
 
 pub fn main() !void {
@@ -58,14 +56,11 @@ pub fn main() !void {
     const texture = try core.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);
     try alka.getAssetManager().loadTexturePro(2, texture);
 
-    var font = try core.renderer.Font.createFromTTF(&gpa.allocator, "assets/arial.ttf", null, 50);
-    try alka.getAssetManager().loadTexturePro(3, font.texture);
+    try alka.getAssetManager().loadFont(0, "assets/arial.ttf", 50);
 
     try alka.open();
     try alka.update();
     try alka.close();
-
-    font.destroy();
 
     try alka.deinit();
 

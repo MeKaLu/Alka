@@ -418,7 +418,6 @@ pub const Font = struct {
     glyphs: []Glyph = undefined,
 
     base_size: i32 = undefined,
-    glyphc: i32 = undefined,
     glyph_padding: i32 = undefined,
 
     // source: https://github.com/raysan5/raylib/blob/cba412cc313e4f95eafb3fba9303400e65 c98984/src/text.c#L553
@@ -522,7 +521,7 @@ pub const Font = struct {
         return chars;
     }
 
-    pub fn genImageAtlas(self: *Font) Error!TextureRaw {
+    fn genImageAtlas(self: *Font) Error!TextureRaw {
         var atlas: []u8 = undefined;
         var atlasw: i32 = 0;
         var atlash: i32 = 0;
@@ -621,11 +620,21 @@ pub const Font = struct {
         return TextureRaw{ .pixels = atlas, .width = atlasw, .height = atlash };
     }
 
+    /// Returns index position for a unicode char on font
+    pub fn glyphIndex(self: Font, codepoint: u64) u64 {
+        var index: u64 = char_fallback;
+
+        var i: usize = 0;
+        while (i < self.glyphs.len) : (i += 1) {
+            if (self.glyphs[i].codepoint == codepoint) return @intCast(u64, i);
+        }
+        return index;
+    }
+
     pub fn createFromTTF(alloc: *std.mem.Allocator, filepath: []const u8, chars: ?[]const u64, pixelsize: i32) Error!Font {
         var result = Font{};
         result.alloc = alloc;
         result.base_size = pixelsize;
-        result.glyphc = if (chars) |ch| @intCast(i32, ch.len) else 95;
         result.glyph_padding = 0;
 
         var mem = try fs.readFile(alloc, filepath);
@@ -665,11 +674,12 @@ pub const Font = struct {
 
     pub fn destroy(self: *Font) void {
         var i: usize = 0;
-        while (i < self.glyphc) : (i += 1) {
+        while (i < self.glyphs.len) : (i += 1) {
             if (self.glyphs[i].raw.pixels) |px|
                 self.alloc.free(px);
         }
         self.alloc.free(self.rects);
         self.alloc.free(self.glyphs);
+        self.texture.destroy();
     }
 };

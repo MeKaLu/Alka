@@ -85,12 +85,14 @@ pub const AssetManager = struct {
         };
     }
 
-    const Texture = comptime GenericType(renderer.Texture);
     const Shader = comptime GenericType(u32);
+    const Texture = comptime GenericType(renderer.Texture);
+    const Font = comptime GenericType(renderer.Font);
 
     alloc: *std.mem.Allocator = undefined,
     shaders: std.ArrayList(Shader) = undefined,
     textures: std.ArrayList(Texture) = undefined,
+    fonts: std.ArrayList(Font) = undefined,
 
     fn findShader(self: AssetManager, id: u64) Error!u64 {
         var i: u64 = 0;
@@ -108,20 +110,31 @@ pub const AssetManager = struct {
         return Error.InvalidId;
     }
 
+    fn findFont(self: AssetManager, id: u64) Error!u64 {
+        var i: u64 = 0;
+        while (i < self.fonts.items.len) : (i += 1) {
+            if (self.fonts.items[i].id == id) return i;
+        }
+        return Error.InvalidId;
+    }
+
     pub fn init(self: *AssetManager) Error!void {
         self.shaders = std.ArrayList(Shader).init(self.alloc);
         self.textures = std.ArrayList(Texture).init(self.alloc);
+        self.fonts = std.ArrayList(Font).init(self.alloc);
         self.shaders.resize(5) catch {
             return Error.FailedToResize;
         };
         self.textures.resize(32) catch {
             return Error.FailedToResize;
         };
+        self.fonts.resize(5) catch {
+            return Error.FailedToResize;
+        };
     }
 
     pub fn deinit(self: *AssetManager) void {
         var i: u64 = 0;
-        i = 0;
         while (i < self.shaders.items.len) : (i += 1) {
             if (self.shaders.items[i].id) |id| {
                 alog.notice("shader({}) destroyed!", .{id});
@@ -129,6 +142,7 @@ pub const AssetManager = struct {
                 self.shaders.items[i].id = null;
             }
         }
+        i = 0;
         while (i < self.textures.items.len) : (i += 1) {
             if (self.textures.items[i].id) |id| {
                 alog.notice("texture({}) destroyed!", .{id});
@@ -136,9 +150,18 @@ pub const AssetManager = struct {
                 self.textures.items[i].id = null;
             }
         }
+        i = 0;
+        while (i < self.fonts.items.len) : (i += 1) {
+            if (self.fonts.items[i].id) |id| {
+                alog.notice("font({}) destroyed!", .{id});
+                self.fonts.items[i].data.destroy();
+                self.fonts.items[i].id = null;
+            }
+        }
 
         self.shaders.deinit();
         self.textures.deinit();
+        self.fonts.deinit();
     }
 
     pub fn isShaderExists(self: AssetManager, id: u64) bool {
@@ -153,6 +176,14 @@ pub const AssetManager = struct {
         var i: u64 = 0;
         while (i < self.textures.items.len) : (i += 1) {
             if (self.textures.items[i].id == id) return true;
+        }
+        return false;
+    }
+
+    pub fn isFontExists(self: AssetManager, id: u64) bool {
+        var i: u64 = 0;
+        while (i < self.fonts.items.len) : (i += 1) {
+            if (self.fonts.items[i].id == id) return true;
         }
         return false;
     }
@@ -187,6 +218,19 @@ pub const AssetManager = struct {
         alog.notice("texture({}) loaded!", .{id});
     }
 
+    pub fn loadFont(self: *AssetManager, id: u64, path: []const u8, pixelsize: i32) Error!void {
+        try self.loadFontPro(id, try renderer.Font.createFromTTF(self.alloc, path, null, pixelsize));
+    }
+
+    pub fn loadFontPro(self: *AssetManager, id: u64, font: renderer.Font) Error!void {
+        if (self.isFontExists(id)) {
+            alog.err("font({}) already exists!", .{id});
+            return Error.AlreadyExists;
+        }
+        try self.fonts.append(.{ .id = id, .data = font });
+        alog.notice("font({}) loaded!", .{id});
+    }
+
     pub fn unloadShader(self: *AssetManager, id: u64) Error!void {
         if (!self.isShaderExists(id)) {
             alog.warn("shader({}) does not exists!", .{id});
@@ -213,6 +257,19 @@ pub const AssetManager = struct {
         _ = self.textures.swapRemove(i);
     }
 
+    pub fn unloadFont(self: *AssetManager, id: u64) Error!void {
+        if (!self.isFontExists(id)) {
+            alog.warn("font({}) does not exists!", .{id});
+            return;
+        } else if (id == 0) {
+            alog.warn("font({}) is provided by the engine! It is not meant to unload manually!", .{id});
+            return;
+        }
+        const i = try self.findFont(id);
+        self.fonts.items[i].font.destroy();
+        _ = self.fonts.swapRemove(i);
+    }
+
     pub fn getShader(self: AssetManager, id: u64) Error!u32 {
         const i = self.findShader(id) catch |err| {
             if (err == Error.InvalidId) {
@@ -231,6 +288,16 @@ pub const AssetManager = struct {
             } else return err;
         };
         return self.textures.items[i].data;
+    }
+
+    pub fn getFont(self: AssetManager, id: u64) Error!renderer.Font {
+        const i = self.findFont(id) catch |err| {
+            if (err == Error.InvalidId) {
+                alog.warn("font({}) does not exists!", .{id});
+                return Error.InvalidId;
+            } else return err;
+        };
+        return self.fonts.items[i].data;
     }
 };
 
@@ -410,6 +477,39 @@ pub fn submitTextureQuad(i: usize, p0: m.Vec2f, p1: m.Vec2f, p2: m.Vec2f, p3: m.
             alog.notice("batch(id: {}) flushed!", .{i});
         } else return err;
     };
+}
+
+pub fn submitFontPointQuad(i: usize, font_id: u64, codepoint: u64, position: m.Vec2f, psize: f32, colour: Colour) Error!void {
+    var b = &p.batchs[i];
+    const font = try p.assetmanager.getFont(font_id);
+
+    const index = font.glyphIndex(codepoint);
+    const scale_factor: f32 = psize / @intToFloat(f32, font.base_size);
+
+    // zig fmt: off
+    const rect = m.Rectangle{ 
+    .position = .{ .x = position.x + @intToFloat(f32, font.glyphs[index].offx) * scale_factor - @intToFloat(f32, font.glyph_padding) * scale_factor, 
+        .y = position.y + @intToFloat(f32, font.glyphs[index].offy) * scale_factor - @intToFloat(f32, font.glyph_padding) * scale_factor }, 
+    .size = .{ .x = (font.rects[index].size.x + 2 * @intToFloat(f32, font.glyph_padding)) * scale_factor, 
+        .y = (font.rects[index].size.y + 2 * @intToFloat(f32, font.glyph_padding)) * scale_factor } 
+    };
+
+    // zig fmt: on
+
+    const src = m.Rectangle{ .position = m.Vec2f{
+        .x = font.rects[index].position.x - @intToFloat(f32, font.glyph_padding),
+        .y = font.rects[index].position.y - @intToFloat(f32, font.glyph_padding),
+    }, .size = m.Vec2f{
+        .x = font.rects[index].size.x + 2 * @intToFloat(f32, font.glyph_padding),
+        .y = font.rects[index].size.y + 2 * @intToFloat(f32, font.glyph_padding),
+    } };
+
+    const pos0 = m.Vec2f{ .x = rect.position.x, .y = rect.position.y };
+    const pos1 = m.Vec2f{ .x = rect.position.x + rect.size.x, .y = rect.position.y };
+    const pos2 = m.Vec2f{ .x = rect.position.x + rect.size.x, .y = rect.position.y + rect.size.y };
+    const pos3 = m.Vec2f{ .x = rect.position.x, .y = rect.position.y + rect.size.y };
+
+    return submitTextureQuad(i, pos0, pos1, pos2, pos3, src, colour);
 }
 
 fn setShaderAttribs() void {
