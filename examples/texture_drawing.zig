@@ -16,10 +16,12 @@ fn draw() !void {
 
     const r = m.Rectangle{ .position = m.Vec2f{ .x = 100.0, .y = 200.0 }, .size = m.Vec2f{ .x = 50.0, .y = 50.0 } };
     const col = alka.Colour{ .r = 1, .g = 1, .b = 1, .a = 1 };
+    // id, rect, source rect, origin, angle in radians, colour
     try alka.drawTextureAdv(1, r, srect, m.Vec2f{ .x = 25, .y = 25 }, m.deg2radf(45), col);
 
     const r2 = m.Rectangle{ .position = m.Vec2f{ .x = 300.0, .y = 200.0 }, .size = m.Vec2f{ .x = 50.0, .y = 50.0 } };
     const col2 = alka.Colour.rgba(30, 80, 200, 255);
+    // id, rect, source rect, colour
     try alka.drawTexture(1, r2, srect, col2);
 }
 
@@ -36,7 +38,7 @@ pub fn main() !void {
 
     try alka.init(callbacks, 1024, 768, "Texture Drawing", 0, false, &gpa.allocator);
 
-    // load texture
+    // id, path
     try alka.getAssetManager().loadTexture(1, "assets/test.png");
 
     // or

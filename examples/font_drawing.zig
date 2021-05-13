@@ -19,6 +19,7 @@ fn draw() !void {
 
     try alka.drawTexture(1, r, srect, col);
 
+    // id, position, size, colour
     try alka.drawTextPoint(0, 'A', m.Vec2f{ .x = 200, .y = 300 }, 24, col);
     try alka.drawTextPoint(0, 'L', m.Vec2f{ .x = 200 + 15, .y = 300 }, 24, col);
     try alka.drawTextPoint(0, 'K', m.Vec2f{ .x = 200 + 15 * 2, .y = 300 }, 24, col);
@@ -40,9 +41,10 @@ pub fn main() !void {
 
     // .. bitmap width & height, pixel size
     const texture = try core.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);
+    // id, texture
     try alka.getAssetManager().loadTexturePro(1, texture); // texture 0 & shader 0 is reserved for defaults
 
-    // .. pixel size
+    // id, path, pixel size
     try alka.getAssetManager().loadFont(0, "assets/arial.ttf", 128);
 
     try alka.open();
