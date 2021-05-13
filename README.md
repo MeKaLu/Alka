@@ -1,8 +1,8 @@
 # Alka
 Game engine written in zig, compatible with **master branch**.
 
-You may need these to compile the engine
-`sudo apt install libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl-dev`
+You may need these packages to compile the engine(tested on ubuntu 21.04)
+`libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl-dev`
 
 Get started [now](https://github.com/Kiakra/Alka/blob/master/get-started.md)
 
@@ -12,19 +12,18 @@ Get started [now](https://github.com/Kiakra/Alka/blob/master/get-started.md)
 - [x] Single window operations
 - [x] Input management
 - [x] Asset manager
-- 2D Renderer:
-    - [x] Camera
-    - [1/2] Shape drawing
-    - [x] Texture drawing
-    - [1/2] Custom batch system 
-    - [1/2] Text drawing 
-    - [ ] GUI system
-    - [ ] Optional: Vulkan implementation
+- [1/2] Custom batch system 
+- [x] 2D Camera
+- [1/2] 2D Shape drawing
+- [x] 2D Texture drawing
+- [1/2] 2D Text drawing 
+- [ ] GUI system
 - [ ] Audio
-- [ ] Optional: Android support
+- [ ] Optional: Data packer 
 - [ ] Optional: Simple ecs
 - [ ] Optional: Scripting language 
-- [ ] Optional: Data packer 
+- [ ] Optional: Vulkan implementation
+- [ ] Optional: Android support
 
 ## About release cycle
 * Versioning: major.minor.patch

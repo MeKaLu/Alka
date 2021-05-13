@@ -1,9 +1,6 @@
-# Examples
-More on [examples](https://github.com/Kiakra/Alka/tree/master/examples)
-
 ## How to compile?
 
-Download this github repo and copy the "libbuild.zig" file to your project for zig's build system
+Clone this github repo or download the newest release and copy the "libbuild.zig" file to your project for zig's build system
 
 After that all you need to do put this code in `build.zig` file:
 
@@ -27,3 +24,5 @@ pub fn build(b: *Builder) void {
 `zig build` and done!
 
 ### [Basic application](https://github.com/Kiakra/Alka/blob/master/examples/basic_setup.zig)
+
+#### More on [examples](https://github.com/Kiakra/Alka/tree/master/examples)
