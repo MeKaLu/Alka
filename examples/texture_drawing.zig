@@ -1,9 +1,8 @@
 const std = @import("std");
 const alka = @import("alka");
-const core = @import("alka_core");
 
-const m = core.math;
-usingnamespace core.log;
+const m = alka.math;
+usingnamespace alka.log;
 
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;
@@ -43,19 +42,19 @@ pub fn main() !void {
     {
         const texture = try alka.getAssetManager().getTexture(1);
         // min, mag
-        texture.setFilter(core.gl.TextureParamater.filter_nearest, core.gl.TextureParamater.filter_nearest);
+        texture.setFilter(alka.gl.TextureParamater.filter_nearest, alka.gl.TextureParamater.filter_nearest);
     }
 
     // or
     {
-        const texture = try core.renderer.Texture.createFromPNG(&gpa.allocator, "assets/test.png");
+        const texture = try alka.renderer.Texture.createFromPNG(&gpa.allocator, "assets/test.png");
         try alka.getAssetManager().loadTexturePro(2, texture);
     }
 
     // or
     {
         const mem = @embedFile("../assets/test.png");
-        const texture = try core.renderer.Texture.createFromPNGMemory(mem);
+        const texture = try alka.renderer.Texture.createFromPNGMemory(mem);
         try alka.getAssetManager().loadTexturePro(3, texture);
         // or
         try alka.getAssetManager().loadTextureFromMemory(4, mem);

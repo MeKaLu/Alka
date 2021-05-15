@@ -42,7 +42,7 @@ pub fn build(b: *Builder) void {
         }
 
         {
-            const exe = lib.setupWithStatic(b, target, "font_drawing", "examples/font_drawing.zig", "./");
+            const exe = lib.setupWithStatic(b, target, "text_rendering", "examples/text_rendering.zig", "./");
             exe.setOutputDir("build");
             exe.setBuildMode(mode);
             exe.install();

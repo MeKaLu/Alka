@@ -129,7 +129,6 @@ pub fn setup(b: *Builder, target: Zig.CrossTarget, comptime gamename: []const u8
 pub fn setupWithStatic(b: *Builder, target: Zig.CrossTarget, gamename: []const u8, gamepath: []const u8, comptime enginepath: []const u8) *Build.LibExeObjStep {
     const exe = b.addExecutable(gamename, gamepath);
 
-    exe.addPackagePath("alka_core", enginepath ++ "src/core/core.zig");
     exe.addPackagePath("alka", enginepath ++ "src/alka.zig");
 
     exe.strip = strip;

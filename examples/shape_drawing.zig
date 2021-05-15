@@ -1,9 +1,8 @@
 const std = @import("std");
 const alka = @import("alka");
-const core = @import("alka_core");
 
-const m = core.math;
-usingnamespace core.log;
+const m = alka.math;
+usingnamespace alka.log;
 
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;

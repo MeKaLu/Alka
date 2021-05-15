@@ -24,16 +24,28 @@
 //   distribution.
 
 const std = @import("std");
-const glfw = @import("core/glfw.zig");
-const renderer = @import("core/renderer.zig");
-const gl = @import("core/gl.zig");
-const input = @import("core/input.zig");
-const window = @import("core/window.zig");
-const m = @import("core/math/math.zig");
-const utf8 = @import("core/utf8.zig");
 const pr = @import("private.zig");
 
-usingnamespace @import("core/log.zig");
+/// opengl library
+pub const gl = @import("core/gl.zig");
+/// file system library
+pub const fs = @import("core/fs.zig");
+/// utf8 library
+pub const utf8 = @import("core/utf8.zig");
+/// math library
+pub const math = @import("core/math/math.zig");
+/// glfw library
+pub const glfw = @import("core/glfw.zig");
+/// input library
+pub const input = @import("core/input.zig");
+/// std.log implementation
+pub const log = @import("core/log.zig");
+/// primitive renderer library
+pub const renderer = @import("core/renderer.zig");
+/// single window management library
+pub const window = @import("core/window.zig");
+
+const m = math;
 const alog = std.log.scoped(.alka);
 
 const perror = error{InvalidBatch};

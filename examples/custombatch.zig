@@ -1,9 +1,8 @@
 const std = @import("std");
 const alka = @import("alka");
-const core = @import("alka_core");
 
-const m = core.math;
-usingnamespace core.log;
+const m = alka.math;
+usingnamespace alka.log;
 
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;
@@ -44,7 +43,7 @@ fn draw() !void {
     // create the batch
     // NOTE: if the batch exists, it won't create one, instead returns the existing batch
     // drawmode, shader_id, texture_id
-    var batch = try alka.createBatch(core.gl.DrawMode.triangles, 1, 0);
+    var batch = try alka.createBatch(alka.gl.DrawMode.triangles, 1, 0);
 
     // there is also
 
@@ -79,6 +78,7 @@ fn draw() !void {
         // there is also a 2dcamera in unique to every batch,
         // the alka.getCamera2D() is the global camera which every batch defaults for, every frame
         batch.cam2d.zoom.x = 0.5;
+        batch.cam2d.zoom.y = 0.5;
     }
     // pop the batch
     alka.popBatch();

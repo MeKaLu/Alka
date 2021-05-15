@@ -1,9 +1,8 @@
 const std = @import("std");
 const alka = @import("alka");
-const core = @import("alka_core");
 
-const m = core.math;
-usingnamespace core.log;
+const m = alka.math;
+usingnamespace alka.log;
 
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;
@@ -46,12 +45,12 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(callbacks, 1024, 768, "Font Drawing", 0, false, &gpa.allocator);
+    try alka.init(callbacks, 1024, 768, "Text Rendering", 0, false, &gpa.allocator);
 
     // .. bitmap width & height, pixel size
-    const texture = try core.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);
+    const texture = try alka.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);
     // min, mag
-    texture.setFilter(core.gl.TextureParamater.filter_mipmap_nearest, core.gl.TextureParamater.filter_linear);
+    texture.setFilter(alka.gl.TextureParamater.filter_mipmap_nearest, alka.gl.TextureParamater.filter_linear);
     // id, texture
     try alka.getAssetManager().loadTexturePro(1, texture); // texture 0 & shader 0 is reserved for defaults
 
@@ -59,7 +58,7 @@ pub fn main() !void {
     try alka.getAssetManager().loadFont(0, "assets/arial.ttf", 128);
     const font = try alka.getAssetManager().getFont(0);
     // min, mag
-    font.texture.setFilter(core.gl.TextureParamater.filter_mipmap_nearest, core.gl.TextureParamater.filter_linear);
+    font.texture.setFilter(alka.gl.TextureParamater.filter_mipmap_nearest, alka.gl.TextureParamater.filter_linear);
 
     try alka.open();
     try alka.update();

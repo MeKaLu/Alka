@@ -1,9 +1,8 @@
 const std = @import("std");
 const alka = @import("alka.zig");
-const core = @import("core/core.zig");
 
-usingnamespace core.math;
-usingnamespace core.log;
+usingnamespace alka.math;
+usingnamespace alka.log;
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;
 
@@ -49,7 +48,7 @@ fn draw() !void {
     const font = try asset.getFont(0);
     const col = alka.Colour{ .r = 1, .g = 1, .b = 1, .a = 1 };
 
-    var batch = try alka.createBatch(core.gl.DrawMode.triangles, 1, 0);
+    var batch = try alka.createBatch(alka.gl.DrawMode.triangles, 1, 0);
 
     alka.pushBatch(batch);
     const r = Rectangle{ .position = Vec2f{ .x = 100.0, .y = 200.0 }, .size = Vec2f{ .x = 50.0, .y = 50.0 } };
@@ -96,15 +95,15 @@ pub fn main() !void {
     try alka.getAssetManager().loadShader(1, vertex_shader, fragment_shader);
     try alka.getAssetManager().loadTexture(1, "assets/test.png");
 
-    const texture = try core.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);
-    texture.setFilter(core.gl.TextureParamater.filter_mipmap_nearest, core.gl.TextureParamater.filter_linear);
+    const texture = try alka.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);
+    texture.setFilter(alka.gl.TextureParamater.filter_mipmap_nearest, alka.gl.TextureParamater.filter_linear);
 
     try alka.getAssetManager().loadTexturePro(2, texture);
 
     try alka.getAssetManager().loadFont(0, "assets/arial.ttf", 128);
 
     const font = try alka.getAssetManager().getFont(0);
-    font.texture.setFilter(core.gl.TextureParamater.filter_mipmap_nearest, core.gl.TextureParamater.filter_linear);
+    font.texture.setFilter(alka.gl.TextureParamater.filter_mipmap_nearest, alka.gl.TextureParamater.filter_linear);
 
     try alka.open();
     try alka.update();
