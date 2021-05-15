@@ -33,17 +33,17 @@ pub fn main() !void {
 
     var world = try World.init(&gpa.allocator);
 
-    const ent2 = try world.createEntity("entity 2");
+    const ent2 = try world.entity.create("entity 2");
     //try world.destroyEntity("entity 1");
-    const ent1 = try world.createEntity("entity 1");
+    const ent1 = try world.entity.create("entity 1");
     mlog.warn("ent1 has pos: {}, ent2: {}", .{ ent1, ent2 });
 
     {
-        var group = try World.Group.init(&gpa.allocator, &world);
+        var group = try World.Group.create(&world);
         try group.add(ent1, PositionStore, m.Vec2f{ .x = 10, .y = 20 });
         try group.add(ent2, SizeStore, m.Vec2f{ .x = 0, .y = 0 });
 
-        const vlist = try World.View(struct { pos: PositionStore }).collect(&gpa.allocator, &group);
+        const vlist = try group.view(struct { pos: PositionStore });
         var it = vlist.iterator();
         while (it.next()) |entity| {
             if (entity.data) |id|
@@ -52,7 +52,7 @@ pub fn main() !void {
 
         defer vlist.deinit();
 
-        group.deinit();
+        group.destroy();
     }
     world.deinit();
 
