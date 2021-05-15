@@ -40,17 +40,23 @@ const fragment_shader =
 
 fn draw() !void {
     const asset = alka.getAssetManager();
-    const shader = try asset.getShader(1);
-    const white_texture = try asset.getTexture(0);
 
     // create the batch
-    var batch = try alka.createBatch(core.gl.DrawMode.triangles, shader, white_texture);
+    // NOTE: if the batch exists, it won't create one, instead returns the existing batch
+    // drawmode, shader_id, texture_id
+    var batch = try alka.createBatch(core.gl.DrawMode.triangles, 1, 0);
 
     // there is also
+
+    // usefull when using non-assetmanager loaded shaders and textures
+    // createBatchNoID(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Error!Batch
     //
     // every draw call will create batches even if you don't create one explicitly
     // this is usefull in case you need to explicitly use auto-gen batchs
-    // getBatch(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Error!Batch
+    // getBatch(mode: gl.DrawMode, sh_id: u64, texture_id: u64) Error!Batch
+    //
+    // usefull when using non-assetmanager loaded shaders and textures
+    // getBatchNoID(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Error!Batch
     //
     // explicitly renders the batch, does not clean the batch tho
     // so you need to use cleanBatch() if you don't want to end up with

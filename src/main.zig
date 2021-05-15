@@ -45,14 +45,11 @@ fn update(dt: f32) !void {
 
 fn draw() !void {
     var asset = alka.getAssetManager();
-    const shader = try asset.getShader(1);
-    const deftexture = try asset.getTexture(0);
-    const testpng = try asset.getTexture(1);
     const staticfont = try asset.getTexture(2);
     const font = try asset.getFont(0);
     const col = alka.Colour{ .r = 1, .g = 1, .b = 1, .a = 1 };
 
-    var batch = try alka.createBatch(core.gl.DrawMode.triangles, shader, deftexture);
+    var batch = try alka.createBatch(core.gl.DrawMode.triangles, 1, 0);
 
     alka.pushBatch(batch);
     const r = Rectangle{ .position = Vec2f{ .x = 100.0, .y = 200.0 }, .size = Vec2f{ .x = 50.0, .y = 50.0 } };
