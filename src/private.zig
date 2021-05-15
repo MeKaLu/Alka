@@ -24,17 +24,18 @@
 //   distribution.
 
 const std = @import("std");
-const glfw = @import("core/glfw.zig");
-const renderer = @import("core/renderer.zig");
-const gl = @import("core/gl.zig");
-const input = @import("core/input.zig");
-const window = @import("core/window.zig");
-const fs = @import("core/fs.zig");
-const c = @import("core/c.zig");
-const m = @import("core/math/math.zig");
-const utils = @import("core/utils.zig");
+const core = @import("core/core.zig");
+const glfw = core.glfw;
+const renderer = core.renderer;
+const gl = core.gl;
+const input = core.input;
+const window = core.window;
+const fs = core.fs;
+const c = core.c;
+const m = core.math;
+const utils = core.utils;
 
-usingnamespace @import("core/log.zig");
+usingnamespace core.log;
 const alog = std.log.scoped(.alka);
 
 pub const embed = struct {
@@ -49,7 +50,7 @@ pub const embed = struct {
 const perror = error{ EngineIsInitialized, EngineIsNotInitialized, FailedToFind };
 const asseterror = error{ AlreadyExists, FailedToResize, InvalidID };
 /// Error set
-pub const Error = perror || asseterror || glfw.GLFWError || renderer.Error || gl.Error || input.Error || fs.Error || utils.Error;
+pub const Error = perror || asseterror || core.Error;
 
 pub const max_quad = 1024 * 8;
 pub const Vertex2D = comptime renderer.VertexGeneric(true, m.Vec2f);
@@ -138,7 +139,7 @@ pub const AssetManager = struct {
         var i: u64 = 0;
         while (i < self.shaders.items.len) : (i += 1) {
             if (self.shaders.items[i].id) |id| {
-                alog.notice("shader(id: {}) destroyed!", .{id});
+                alog.notice("shader(id: {}) unloaded!", .{id});
                 gl.shaderProgramDelete(self.shaders.items[i].data);
                 self.shaders.items[i].id = null;
             }
@@ -146,7 +147,7 @@ pub const AssetManager = struct {
         i = 0;
         while (i < self.textures.items.len) : (i += 1) {
             if (self.textures.items[i].id) |id| {
-                alog.notice("texture(id: {}) destroyed!", .{id});
+                alog.notice("texture(id: {}) unloaded!", .{id});
                 self.textures.items[i].data.destroy();
                 self.textures.items[i].id = null;
             }
@@ -154,7 +155,7 @@ pub const AssetManager = struct {
         i = 0;
         while (i < self.fonts.items.len) : (i += 1) {
             if (self.fonts.items[i].id) |id| {
-                alog.notice("font(id: {}) destroyed!", .{id});
+                alog.notice("font(id: {}) unloaded!", .{id});
                 self.fonts.items[i].data.destroy();
                 self.fonts.items[i].id = null;
             }
@@ -243,6 +244,7 @@ pub const AssetManager = struct {
         const i = try self.findShader(id);
         gl.shaderProgramDelete(self.shaders.items[i].data);
         _ = self.shaders.swapRemove(i);
+        alog.notice("shader(id: {}) unloaded!", .{id});
     }
 
     pub fn unloadTexture(self: *AssetManager, id: u64) Error!void {
@@ -256,6 +258,7 @@ pub const AssetManager = struct {
         const i = try self.findTexture(id);
         self.textures.items[i].texture.destroy();
         _ = self.textures.swapRemove(i);
+        alog.notice("texture(id: {}) unloaded!", .{id});
     }
 
     pub fn unloadFont(self: *AssetManager, id: u64) Error!void {
@@ -269,6 +272,7 @@ pub const AssetManager = struct {
         const i = try self.findFont(id);
         self.fonts.items[i].font.destroy();
         _ = self.fonts.swapRemove(i);
+        alog.notice("font(id: {}) unloaded!", .{id});
     }
 
     pub fn getShader(self: AssetManager, id: u64) Error!u32 {

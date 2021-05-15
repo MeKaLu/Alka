@@ -25,31 +25,42 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(&gpa.allocator, callbacks, 1024, 768, "title go brrr", 0, false);
+    //    try alka.init(&gpa.allocator, callbacks, 1024, 768, "title go brrr", 0, false);
 
-    var list = try alka.utils.UniqueListGeneric(f32).init(&gpa.allocator, 0);
+    const PositionStore = alka.ecs.StoreComponent("Position", m.Vec2f);
+    const SizeStore = alka.ecs.StoreComponent("Size", m.Vec2f);
+    const World = alka.ecs.World(struct { pos: PositionStore, size: SizeStore });
 
-    try list.append(0, 10.2);
-    try list.append(1, 15.5);
-    try list.append(5, 25.0);
+    var world = try World.init(&gpa.allocator);
 
-    //try list.remove(5);
+    const ent2 = try world.createEntity("entity 2");
+    //try world.destroyEntity("entity 1");
+    const ent1 = try world.createEntity("entity 1");
+    mlog.warn("ent1 has pos: {}, ent2: {}", .{ ent1, ent2 });
 
-    const lzero = try list.get(0);
-    const lone = try list.get(1);
-    const lfive = try list.get(5);
+    {
+        var group = try World.Group.init(&gpa.allocator, &world);
+        try group.add(ent1, PositionStore, m.Vec2f{ .x = 10, .y = 20 });
+        try group.add(ent2, SizeStore, m.Vec2f{ .x = 0, .y = 0 });
 
-    mlog.info("zero: {d}", .{lzero});
-    mlog.info("one: {d}", .{lone});
-    mlog.info("five: {d}", .{lfive});
+        const vlist = try World.View(struct { pos: PositionStore }).collect(&gpa.allocator, &group);
+        var it = vlist.iterator();
+        while (it.next()) |entity| {
+            if (entity.data) |id|
+                mlog.info("view id: {}", .{id});
+        }
 
-    list.deinit();
+        defer vlist.deinit();
+
+        group.deinit();
+    }
+    world.deinit();
 
     //try alka.open();
     //try alka.update();
     //try alka.close();
 
-    try alka.deinit();
+    //try alka.deinit();
 
     const leaked = gpa.deinit();
     if (leaked) return error.Leak;

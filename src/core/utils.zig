@@ -27,18 +27,36 @@ const std = @import("std");
 
 pub const Error = error{ FailedtoAllocate, IsNotUnique, InvalidID };
 
-pub fn UniqueListGeneric(comptime T: type) type {
+pub fn UniqueList(comptime generic_type: type) type {
     return struct {
-        pub const generic_type = T;
+        pub const T = generic_type;
         const Self = @This();
 
         pub const Item = struct {
-            data: ?generic_type = null,
+            data: ?T = null,
             id: u64 = 0,
         };
 
         alloc: *std.mem.Allocator = undefined,
         items: []Item = undefined,
+
+        /// Iterator
+        pub const Iterator = struct {
+            parent: *const Self = undefined,
+            index: usize = undefined,
+
+            pub fn next(it: *Iterator) ?*Item {
+                if (it.index >= it.parent.items.len) return null;
+                const result = &it.parent.items[it.index];
+                it.index += 1;
+                return result;
+            }
+
+            /// Reset the iterator
+            pub fn reset(it: *Iterator) void {
+                it.index = 0;
+            }
+        };
 
         /// Initializes the UniqueList
         pub fn init(alloc: *std.mem.Allocator, reserve: usize) Error!Self {
@@ -65,7 +83,7 @@ pub fn UniqueListGeneric(comptime T: type) type {
         }
 
         /// Reserves memory
-        pub fn reserve_slots(self: *Self, reserve: usize) Error!void {
+        pub fn reserveSlots(self: *Self, reserve: usize) Error!void {
             const epos = self.end();
             self.items = self.alloc.realloc(self.items, self.items.len + reserve) catch return Error.FailedtoAllocate;
 
@@ -84,9 +102,18 @@ pub fn UniqueListGeneric(comptime T: type) type {
         pub fn isUnique(self: Self, id: u64) bool {
             var i: usize = 0;
             while (i < self.items.len) : (i += 1) {
-                if (self.items[i].data != null and self.items[i].id == id) return false;
+                if (self.items[i].data != null and self.items[i].id == id) return true;
             }
-            return true;
+            return false;
+        }
+
+        /// Returns an unique id 
+        pub fn findUnique(self: Self) u64 {
+            var i: u64 = 0;
+            while (i < self.items.len) : (i += 1) {
+                if (!self.isUnique(i)) return i;
+            }
+            @panic("Probably integer overflow and how tf did you end up here anyways?");
         }
 
         /// Is the given item slot empty?
@@ -97,22 +124,22 @@ pub fn UniqueListGeneric(comptime T: type) type {
 
         /// Inserts an item with given id and index
         /// Can(& will) overwrite into existing index if id is unique
-        pub fn insertAt(self: *Self, id: u64, index: usize, data: generic_type) Error!void {
-            if (!self.isUnique(id)) return Error.IsNotUnique;
+        pub fn insertAt(self: *Self, id: u64, index: usize, data: T) Error!void {
+            if (self.isUnique(id)) return Error.IsNotUnique;
             self.items[index].data = data;
             self.items[index].id = id;
         }
 
         /// Appends an item with given id
         /// into appropriate item slot
-        pub fn append(self: *Self, id: u64, data: generic_type) Error!void {
+        pub fn append(self: *Self, id: u64, data: T) Error!void {
             var i: usize = 0;
             while (i < self.items.len) : (i += 1) {
                 if (self.isEmpty(i)) {
                     return self.insertAt(id, i, data);
                 }
             }
-            try self.reserve_slots(2);
+            try self.reserveSlots(2);
             return self.insertAt(id, self.end() - 1, data);
         }
 
@@ -130,12 +157,29 @@ pub fn UniqueListGeneric(comptime T: type) type {
         }
 
         /// Returns the data with given id
-        pub fn get(self: Self, id: u64) Error!generic_type {
+        pub fn get(self: Self, id: u64) Error!T {
             var i: usize = 0;
             while (i < self.items.len) : (i += 1) {
                 if (self.items[i].data != null and self.items[i].id == id) return self.items[i].data.?;
             }
             return Error.InvalidID;
+        }
+
+        /// Returns the ptr to the data with given id
+        pub fn getPtr(self: Self, id: u64) Error!*T {
+            var i: usize = 0;
+            while (i < self.items.len) : (i += 1) {
+                if (self.items[i].data != null and self.items[i].id == id) return &self.items[i].data.?;
+            }
+            return Error.InvalidID;
+        }
+
+        /// Returns the iterator
+        pub fn iterator(self: *const Self) Iterator {
+            return Iterator{
+                .parent = self,
+                .index = 0,
+            };
         }
     };
 }

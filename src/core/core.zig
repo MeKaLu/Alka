@@ -35,3 +35,5 @@ pub const input = @import("input.zig");
 pub const log = @import("log.zig");
 pub const renderer = @import("renderer.zig");
 pub const window = @import("window.zig");
+
+pub const Error = gl.Error || fs.Error || ecs.Error || glfw.GLFWError || input.Error || renderer.Error;
