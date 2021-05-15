@@ -76,7 +76,7 @@ var pengineready: bool = false;
 var p: *pr.Private = undefined;
 
 /// Initializes the engine
-pub fn init(callbacks: Callbacks, width: i32, height: i32, title: []const u8, fpslimit: u32, resizable: bool, alloc: *std.mem.Allocator) Error!void {
+pub fn init(alloc: *std.mem.Allocator, callbacks: Callbacks, width: i32, height: i32, title: []const u8, fpslimit: u32, resizable: bool) Error!void {
     if (pengineready) return Error.EngineIsInitialized;
 
     p = try alloc.create(pr.Private);

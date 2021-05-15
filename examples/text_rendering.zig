@@ -45,7 +45,7 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(callbacks, 1024, 768, "Text Rendering", 0, false, &gpa.allocator);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "Text Rendering", 0, false);
 
     // .. bitmap width & height, pixel size
     const texture = try alka.renderer.Texture.createFromTTF(&gpa.allocator, "assets/arial.ttf", "Hello", 500, 500, 24);

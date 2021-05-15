@@ -39,7 +39,8 @@ pub fn main() !void {
         .close = close,
     };
 
-    try alka.init(callbacks, 1024, 768, "Basic Setup", 0, false, &gpa.allocator);
+    // .. fpslimit if zero vsync=on, is resizable?
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "Basic Setup", 0, false);
 
     // opens the window
     try alka.open();

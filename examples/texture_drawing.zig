@@ -35,7 +35,7 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(callbacks, 1024, 768, "Texture Drawing", 0, false, &gpa.allocator);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "Texture Drawing", 0, false);
 
     // id, path
     try alka.getAssetManager().loadTexture(1, "assets/test.png");

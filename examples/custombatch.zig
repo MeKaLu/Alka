@@ -43,7 +43,7 @@ fn draw() !void {
     // create the batch
     // NOTE: if the batch exists, it won't create one, instead returns the existing batch
     // drawmode, shader_id, texture_id
-    var batch = try alka.createBatch(alka.gl.DrawMode.triangles, 1, 0);
+    const batch = try alka.createBatch(alka.gl.DrawMode.triangles, 1, 0);
 
     // there is also
 
@@ -99,7 +99,7 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(callbacks, 1024, 768, "Custom batch", 0, false, &gpa.allocator);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "Custom batch", 0, false);
 
     try alka.getAssetManager().loadShader(1, vertex_shader, fragment_shader);
 

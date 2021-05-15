@@ -38,7 +38,7 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(callbacks, 1024, 768, "Shape Drawing", 0, false, &gpa.allocator);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "Shape Drawing", 0, false);
 
     try alka.open();
     try alka.update();

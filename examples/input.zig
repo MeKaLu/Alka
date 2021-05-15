@@ -10,7 +10,7 @@ var keyAPtr: *const alka.input.State = undefined;
 var mouseleftPtr: *const alka.input.State = undefined;
 
 fn update(dt: f32) !void {
-    var input = alka.getInput();
+    const input = alka.getInput();
 
     const keyA = try input.keyState(alka.input.Key.A);
     const mouseleft = try input.mouseState(alka.input.Mouse.ButtonLeft);
@@ -31,7 +31,7 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(callbacks, 1024, 768, "Input", 0, false, &gpa.allocator);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "Input", 0, false);
 
     var input = alka.getInput();
     try input.bindKey(alka.input.Key.A);

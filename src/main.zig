@@ -90,7 +90,7 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(callbacks, 1024, 768, "title go brrr", 0, false, &gpa.allocator);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "title go brrr", 0, false);
 
     try alka.getAssetManager().loadShader(1, vertex_shader, fragment_shader);
     try alka.getAssetManager().loadTexture(1, "assets/test.png");
