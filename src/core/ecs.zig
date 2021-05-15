@@ -27,7 +27,7 @@ const std = @import("std");
 const utils = @import("utils.zig");
 const UniqueList = utils.UniqueList;
 
-pub const Error = error{ InvalidComponent, InvalidEntity, InvalidEntityID, InvalidEntityName } || utils.Error;
+pub const Error = error{ InvalidComponent, InvalidEntity, InvalidEntityID, InvalidEntityName, InvalidGroup } || utils.Error;
 
 /// Stores the component struct in a convenient way
 pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type {
@@ -46,7 +46,7 @@ pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type 
         pub fn init(alloc: *std.mem.Allocator) Error!Self {
             return Self{
                 .alloc = alloc,
-                .components = try UniqueList(T).init(alloc, 0),
+                .components = try UniqueList(T).init(alloc, 5),
             };
         }
 
@@ -87,31 +87,29 @@ pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type 
 /// World, manages the entities 
 pub fn World(comptime Storage: type) type {
     return struct {
+        const component_names = comptime std.meta.fieldNames(T);
         const Self = @This();
         /// Storage component types
         pub const T = Storage;
 
         /// Group of the StorageComponents
         pub const Group = struct {
-            const component_names = comptime std.meta.fieldNames(T);
-
             alloc: *std.mem.Allocator = undefined,
             world: *const Self = undefined,
             registers: T = undefined,
 
             /// Creates the group
             pub fn create(self: *const Self) Error!Group {
-                var mself = Group{
+                var result = Group{
                     .alloc = self.alloc,
                     .world = self,
                 };
 
                 inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(mself.registers, name));
-                    @field(mself.registers, name) = try typ.init(mself.alloc);
+                    const typ = @TypeOf(@field(result.registers, name));
+                    @field(result.registers, name) = try typ.init(result.alloc);
                 }
-
-                return mself;
+                return result;
             }
 
             /// Collects the entities
@@ -120,7 +118,7 @@ pub fn World(comptime Storage: type) type {
                 comptime const vcomponent_names = comptime std.meta.fieldNames(components);
 
                 var alloc = self.alloc;
-                const ghost = self.registers;
+                const ghost: components = undefined;
                 const world = self.world;
 
                 var list = try UniqueList(u64).init(alloc, 1);
@@ -249,9 +247,6 @@ pub fn World(comptime Storage: type) type {
                 return self.registers.remove(i);
             }
 
-            /// Adds a component to the entity
-            pub fn addComponent(self: Entity, name: []const u8) Error!void {}
-
             /// Is the entity with given name exists? 
             pub fn has(self: Entity, name: []const u8) bool {
                 var it = self.registers.iterator();
@@ -290,15 +285,100 @@ pub fn World(comptime Storage: type) type {
 
         alloc: *std.mem.Allocator = undefined,
         entity: Entity = undefined,
+        group: ?*Group = null,
 
         /// Initializes the world
         pub fn init(alloc: *std.mem.Allocator) Error!Self {
             return Self{
                 .alloc = alloc,
                 .entity = Entity{
-                    .registers = try UniqueList([]const u8).init(alloc, 1),
+                    .registers = try UniqueList([]const u8).init(alloc, 5),
                 },
             };
+        }
+
+        /// Pushes the group
+        pub fn pushGroup(self: *Self, group: *Group) void {
+            self.group = group;
+        }
+
+        /// Pops the group 
+        pub fn popGroup(self: *Self) void {
+            self.group = null;
+        }
+
+        /// Collects the entities
+        /// Returns the entity id's
+        pub fn view(self: *const Self, comptime components: type) Error!UniqueList(u64) {
+            if (self.group) |group|
+                return group.view(components);
+            return Error.InvalidGroup;
+        }
+
+        /// Adds a component to the entity
+        pub fn addComponent(self: *Self, entity_name: []const u8, component_name: []const u8, component: anytype) Error!void {
+            if (self.group) |group| {
+                const id = try self.entity.hasNameID(entity_name);
+
+                inline for (component_names) |name| {
+                    const typ = @TypeOf(@field(group.registers, name));
+                    if (std.mem.eql(u8, component_name, typ.Name)) {
+                        return group.add(id, typ, component);
+                    }
+                }
+                return Error.InvalidComponent;
+            }
+            return Error.InvalidGroup;
+        }
+
+        /// Returns the desired component
+        /// NOTE: READ ONLY
+        pub fn getComponent(self: *Self, entity_name: []const u8, component_name: []const u8, comptime component_type: type) Error!component_type {
+            if (self.group) |group| {
+                const id = try self.entity.hasNameID(entity_name);
+
+                inline for (component_names) |name| {
+                    const typ = @TypeOf(@field(group.registers, name));
+                    if (std.mem.eql(u8, component_name, typ.Name)) {
+                        return group.get(id, typ);
+                    }
+                }
+                return Error.InvalidComponent;
+            }
+            return Error.InvalidGroup;
+        }
+
+        /// Returns the desired component
+        /// NOTE: MUTABLE 
+        pub fn getComponentPtr(self: *Self, entity_name: []const u8, component_name: []const u8, comptime component_type: type) Error!*component_type {
+            if (self.group) |group| {
+                const id = try self.entity.hasNameID(entity_name);
+
+                inline for (component_names) |name| {
+                    const typ = @TypeOf(@field(group.registers, name));
+                    if (std.mem.eql(u8, component_name, typ.Name)) {
+                        return group.getPtr(id, typ);
+                    }
+                }
+                return Error.InvalidComponent;
+            }
+            return Error.InvalidGroup;
+        }
+
+        /// Removes a component to the entity
+        pub fn removeComponent(self: *Self, entity_name: []const u8, component_name: []const u8) Error!void {
+            if (self.group) |group| {
+                const id = try self.entity.hasNameID(entity_name);
+
+                inline for (component_names) |name| {
+                    const typ = @TypeOf(@field(group.registers, name));
+                    if (std.mem.eql(u8, component_name, typ.Name)) {
+                        return group.remove(id, typ);
+                    }
+                }
+                return Error.InvalidComponent;
+            }
+            return Error.InvalidGroup;
         }
 
         /// Deinitializes the world

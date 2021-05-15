@@ -40,19 +40,32 @@ pub fn main() !void {
 
     {
         var group = try World.Group.create(&world);
-        try group.add(ent1, PositionStore, m.Vec2f{ .x = 10, .y = 20 });
-        try group.add(ent2, SizeStore, m.Vec2f{ .x = 0, .y = 0 });
+        defer group.destroy();
 
-        const vlist = try group.view(struct { pos: PositionStore });
+        world.pushGroup(&group);
+        defer world.popGroup();
+
+        {
+            try world.addComponent("entity 1", "Position", m.Vec2f{ .x = 20 });
+            //try world.removeComponent("entity 1", "Position");
+
+            var ptr = try world.getComponentPtr("entity 1", "Position", m.Vec2f);
+            ptr.x = 15.25;
+
+            const a = try world.getComponent("entity 1", "Position", m.Vec2f);
+            mlog.warn("{d:.2}", .{a.x});
+
+            try world.addComponent("entity 2", "Size", m.Vec2f{ .y = 20 });
+        }
+
+        const vlist = try world.view(struct { p: PositionStore });
+        defer vlist.deinit();
+
         var it = vlist.iterator();
         while (it.next()) |entity| {
             if (entity.data) |id|
                 mlog.info("view id: {}", .{id});
         }
-
-        defer vlist.deinit();
-
-        group.destroy();
     }
     world.deinit();
 
