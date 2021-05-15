@@ -32,6 +32,10 @@ pub const gl = @import("core/gl.zig");
 pub const fs = @import("core/fs.zig");
 /// utf8 library
 pub const utf8 = @import("core/utf8.zig");
+/// utils library
+pub const utils = @import("core/utils.zig");
+/// ecs library
+pub const ecs = @import("core/ecs.zig");
 /// math library
 pub const math = @import("core/math/math.zig");
 /// glfw library

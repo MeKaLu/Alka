@@ -32,6 +32,7 @@ const window = @import("core/window.zig");
 const fs = @import("core/fs.zig");
 const c = @import("core/c.zig");
 const m = @import("core/math/math.zig");
+const utils = @import("core/utils.zig");
 
 usingnamespace @import("core/log.zig");
 const alog = std.log.scoped(.alka);
@@ -46,9 +47,9 @@ pub const embed = struct {
 };
 
 const perror = error{ EngineIsInitialized, EngineIsNotInitialized, FailedToFind };
-const asseterror = error{ AlreadyExists, FailedToResize, InvalidId };
+const asseterror = error{ AlreadyExists, FailedToResize, InvalidID };
 /// Error set
-pub const Error = perror || asseterror || glfw.GLFWError || renderer.Error || gl.Error || input.Error || fs.Error;
+pub const Error = perror || asseterror || glfw.GLFWError || renderer.Error || gl.Error || input.Error || fs.Error || utils.Error;
 
 pub const max_quad = 1024 * 8;
 pub const Vertex2D = comptime renderer.VertexGeneric(true, m.Vec2f);
@@ -99,7 +100,7 @@ pub const AssetManager = struct {
         while (i < self.shaders.items.len) : (i += 1) {
             if (self.shaders.items[i].id == id) return i;
         }
-        return Error.InvalidId;
+        return Error.InvalidID;
     }
 
     fn findTexture(self: AssetManager, id: u64) Error!u64 {
@@ -107,7 +108,7 @@ pub const AssetManager = struct {
         while (i < self.textures.items.len) : (i += 1) {
             if (self.textures.items[i].id == id) return i;
         }
-        return Error.InvalidId;
+        return Error.InvalidID;
     }
 
     fn findFont(self: AssetManager, id: u64) Error!u64 {
@@ -115,7 +116,7 @@ pub const AssetManager = struct {
         while (i < self.fonts.items.len) : (i += 1) {
             if (self.fonts.items[i].id == id) return i;
         }
-        return Error.InvalidId;
+        return Error.InvalidID;
     }
 
     pub fn init(self: *AssetManager) Error!void {
@@ -272,9 +273,9 @@ pub const AssetManager = struct {
 
     pub fn getShader(self: AssetManager, id: u64) Error!u32 {
         const i = self.findShader(id) catch |err| {
-            if (err == Error.InvalidId) {
+            if (err == Error.InvalidID) {
                 alog.warn("shader(id: {}) does not exists!", .{id});
-                return Error.InvalidId;
+                return Error.InvalidID;
             } else return err;
         };
         return self.shaders.items[i].data;
@@ -282,9 +283,9 @@ pub const AssetManager = struct {
 
     pub fn getTexture(self: AssetManager, id: u64) Error!renderer.Texture {
         const i = self.findTexture(id) catch |err| {
-            if (err == Error.InvalidId) {
+            if (err == Error.InvalidID) {
                 alog.warn("texture(id: {}) does not exists!", .{id});
-                return Error.InvalidId;
+                return Error.InvalidID;
             } else return err;
         };
         return self.textures.items[i].data;
@@ -292,9 +293,9 @@ pub const AssetManager = struct {
 
     pub fn getFont(self: AssetManager, id: u64) Error!renderer.Font {
         const i = self.findFont(id) catch |err| {
-            if (err == Error.InvalidId) {
+            if (err == Error.InvalidID) {
                 alog.warn("font(id: {}) does not exists!", .{id});
-                return Error.InvalidId;
+                return Error.InvalidID;
             } else return err;
         };
         return self.fonts.items[i].data;
