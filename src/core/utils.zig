@@ -21,7 +21,7 @@
 
 const std = @import("std");
 
-pub const Error = error{ FailedtoAllocate, IsNotUnique, InvalidID };
+pub const Error = error{ FailedtoAllocate, IsNotUnique, InvalidID, DataOverflow };
 
 pub fn UniqueList(comptime generic_type: type) type {
     return struct {
@@ -87,6 +87,7 @@ pub fn UniqueList(comptime generic_type: type) type {
             var i: usize = epos;
             while (i < self.items.len) : (i += 1) {
                 self.items[i].data = null;
+                self.items[i].id = 0;
             }
         }
 
@@ -164,6 +165,143 @@ pub fn UniqueList(comptime generic_type: type) type {
 
         /// Returns the ptr to the data with given id
         pub fn getPtr(self: Self, id: u64) Error!*T {
+            var i: usize = 0;
+            while (i < self.items.len) : (i += 1) {
+                if (self.items[i].data != null and self.items[i].id == id) return &self.items[i].data.?;
+            }
+            return Error.InvalidID;
+        }
+
+        /// Returns the iterator
+        pub fn iterator(self: *const Self) Iterator {
+            return Iterator{
+                .parent = self,
+                .index = 0,
+            };
+        }
+    };
+}
+
+pub fn UniqueFixedList(comptime generic_type: type, comptime generic_max: usize) type {
+    return struct {
+        pub const T = generic_type;
+        pub const Tmax = generic_max;
+        const Self = @This();
+
+        pub const Item = struct {
+            data: ?T = null,
+            id: u64 = 0,
+        };
+
+        /// Iterator
+        pub const Iterator = struct {
+            parent: *const Self = undefined,
+            index: usize = undefined,
+
+            pub fn next(it: *Iterator) ?*Item {
+                if (it.index >= it.parent.items.len) return null;
+                const result = &it.parent.items[it.index];
+                it.index += 1;
+                return result;
+            }
+
+            /// Reset the iterator
+            pub fn reset(it: *Iterator) void {
+                it.index = 0;
+            }
+        };
+
+        items: [Tmax]Item = undefined,
+
+        /// Initializes the UniqueList
+        pub fn init() Self {
+            var self = Self{};
+            self.clear();
+            return self;
+        }
+
+        /// Clears the list
+        pub fn clear(self: *Self) void {
+            var i: usize = 0;
+            while (i < self.items.len) : (i += 1) {
+                self.items[i].data = null;
+                self.items[i].id = 0;
+            }
+        }
+
+        /// Returns the end of the list
+        pub fn end(self: Self) usize {
+            return self.items.len;
+        }
+
+        /// Is the given id unique?
+        pub fn isUnique(self: Self, id: u64) bool {
+            var i: usize = 0;
+            while (i < self.items.len) : (i += 1) {
+                if (self.items[i].data != null and self.items[i].id == id) return false;
+            }
+            return true;
+        }
+
+        /// Returns an unique id 
+        pub fn findUnique(self: Self) u64 {
+            var i: u64 = 0;
+            while (i < self.items.len + 1) : (i += 1) {
+                if (self.isUnique(i)) return i;
+            }
+            @panic("Probably integer overflow and how tf did you end up here anyways?");
+        }
+
+        /// Is the given item slot empty?
+        pub fn isEmpty(self: Self, index: u64) bool {
+            if (self.items[index].data != null) return false;
+            return true;
+        }
+
+        /// Inserts an item with given id and index
+        /// Can(& will) overwrite into existing index if id is unique
+        pub fn insertAt(self: *Self, id: u64, index: usize, data: T) Error!void {
+            if (!self.isUnique(id)) return Error.IsNotUnique;
+            self.items[index].data = data;
+            self.items[index].id = id;
+        }
+
+        /// Appends an item with given id
+        /// into appropriate item slot
+        pub fn append(self: *Self, id: u64, data: T) Error!void {
+            var i: usize = 0;
+            while (i < self.items.len) : (i += 1) {
+                if (self.isEmpty(i)) {
+                    return self.insertAt(id, i, data);
+                }
+            }
+            return Error.DataOverflow;
+        }
+
+        /// Removes the item with given id
+        pub fn remove(self: *Self, id: u64) Error!void {
+            var i: usize = 0;
+            while (i < self.items.len) : (i += 1) {
+                if (self.items[i].data != null and self.items[i].id == id) {
+                    self.items[i].data = null;
+                    return;
+                }
+            }
+
+            return Error.InvalidID;
+        }
+
+        /// Returns the data with given id
+        pub fn get(self: Self, id: u64) Error!T {
+            var i: usize = 0;
+            while (i < self.items.len) : (i += 1) {
+                if (self.items[i].data != null and self.items[i].id == id) return self.items[i].data.?;
+            }
+            return Error.InvalidID;
+        }
+
+        /// Returns the ptr to the data with given id
+        pub fn getPtr(self: *Self, id: u64) Error!*T {
             var i: usize = 0;
             while (i < self.items.len) : (i += 1) {
                 if (self.items[i].data != null and self.items[i].id == id) return &self.items[i].data.?;

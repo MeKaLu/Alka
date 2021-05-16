@@ -6,46 +6,124 @@ usingnamespace alka.log;
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .debug;
 
+const RectangleStore = alka.ecs.StoreComponent("Rectangle", m.Rectangle, maxent);
+const ColourStore = alka.ecs.StoreComponent("Colour", alka.Colour, maxent);
+const World = alka.ecs.World(struct { r: RectangleStore, col: ColourStore });
+
+const maxent: u64 = 1024 * 100;
+var random: *std.rand.Random = undefined;
+
+var world: World = undefined;
+
+var mouseleftPtr: *const alka.input.State = undefined;
+var index: u64 = 0;
+
+fn createEntity(i: u64) !void {
+    var reg = try world.createRegister(i);
+    try reg.create();
+
+    try reg.attach("Rectangle", m.Rectangle{
+        .position = alka.getMousePosition(),
+        .size = m.Vec2f{
+            .x = @intToFloat(f32, random.intRangeAtMost(i32, 10, 50)),
+            .y = @intToFloat(f32, random.intRangeAtMost(i32, 10, 50)),
+        },
+    });
+
+    try reg.attach("Colour", alka.Colour.rgba(255, 255, 255, 255));
+    mlog.info("created {}", .{i});
+}
+
+fn update(dt: f32) !void {
+    if (mouseleftPtr.* == alka.input.State.down) {
+        if (index < maxent) {
+            var i: u64 = index;
+            while (i < index + 10) : (i += 1) {
+                try createEntity(i);
+            }
+            index = i;
+        }
+    }
+}
+
+fn draw() !void {
+    const comps = [_][]const u8{ "Rectangle", "Colour" };
+
+    var it = World.iterator(comps.len, comps){ .world = &world };
+
+    while (it.next()) |entry| {
+        if (entry.value) |entity| {
+            const rect = try entity.get("Rectangle", m.Rectangle);
+            const colour = try entity.get("Colour", alka.Colour);
+
+            try alka.drawRectangle(rect, colour);
+        }
+    }
+
+    const asset = alka.getAssetManager();
+    const font = try asset.getFont(0);
+
+    const col = alka.Colour.rgba(200, 30, 70, 255);
+
+    var debug = try alka.getDebug();
+    defer alka.getAllocator().free(debug);
+
+    try alka.drawText(0, debug, m.Vec2f{ .x = 20, .y = 20 }, 24, col);
+
+    debug = try std.fmt.bufPrint(debug, "total: {}", .{index});
+    try alka.drawText(0, debug, m.Vec2f{ .x = 20, .y = 45 }, 24, col);
+}
+
+fn close() void {
+    var i: u64 = 0;
+    while (i < maxent) : (i += 1) {
+        const reg = world.getRegister(i) catch continue;
+        reg.destroy();
+        world.removeRegister(i) catch continue;
+        mlog.info("destroyed {}", .{i});
+    }
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{
         .enable_memory_limit = true,
     }){};
-    gpa.setRequestedMemoryLimit(1048 * 100 * 100 * 2);
+    gpa.setRequestedMemoryLimit(1048 * 1000 * 30);
 
-    const PositionStore = alka.ecs.StoreComponent("Position", m.Vec2f);
-    const SizeStore = alka.ecs.StoreComponent("Size", m.Vec3f);
-    const TitleStore = alka.ecs.StoreComponent("Title", []const u8);
-    const World = alka.ecs.World(struct { p: PositionStore, s: SizeStore, t: TitleStore });
-    {
-        var world = try World.init(&gpa.allocator);
-        defer world.deinit();
+    const callbacks = alka.Callbacks{
+        .update = update,
+        .fixed = null,
+        .draw = draw,
+        .resize = null,
+        .close = close,
+    };
 
-        var reg = try world.createRegister(0);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "ECS Benchmark", 1000, false);
 
-        try reg.create();
-        defer reg.destroy();
+    var prng = std.rand.DefaultPrng.init(blk: {
+        var seed: u64 = undefined;
+        try std.os.getrandom(std.mem.asBytes(&seed));
+        break :blk seed;
+    });
+    random = &prng.random;
 
-        try reg.attach("Position", m.Vec2f{ .x = 20 });
-        try reg.attach("Size", m.Vec3f{ .x = 20 });
+    var input = alka.getInput();
+    try input.bindMouse(alka.input.Mouse.ButtonLeft);
+    mouseleftPtr = try input.mouseStatePtr(alka.input.Mouse.ButtonLeft);
 
-        var pos = try reg.getPtr("Position", m.Vec2f);
-        pos.y = 26;
+    try alka.getAssetManager().loadFont(0, "assets/arial.ttf", 128);
+    const font = try alka.getAssetManager().getFont(0);
+    font.texture.setFilter(alka.gl.TextureParamater.filter_mipmap_nearest, alka.gl.TextureParamater.filter_linear);
 
-        //try reg.detach("Position");
-        //try reg.attach("Position", m.Vec2f{ .x = 20 });
+    world = try World.init(&gpa.allocator);
 
-        mlog.notice("pos: {s}", .{try reg.get("Position", m.Vec2f)});
+    try alka.open();
+    try alka.update();
+    try alka.close();
 
-        const comps = [_][]const u8{ "Position", "Size" };
-        mlog.err("{}", .{reg.hasThese(comps.len, comps)});
+    world.deinit();
 
-        var it = World.iterator(comps.len, comps){ .world = &world };
-
-        while (it.next()) |entry| {
-            if (entry.value) |entity|
-                mlog.notice("entity: {}", .{entity});
-        }
-    }
+    try alka.deinit();
 
     const leaked = gpa.deinit();
     if (leaked) return error.Leak;

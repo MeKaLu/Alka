@@ -12,15 +12,19 @@ pub fn main() !void {
     }){};
     gpa.setRequestedMemoryLimit(1048 * 100 * 100 * 2);
 
-    const PositionStore = alka.ecs.StoreComponent("Position", m.Vec2f);
-    const SizeStore = alka.ecs.StoreComponent("Size", m.Vec3f);
-    const TitleStore = alka.ecs.StoreComponent("Title", []const u8);
+    const maxent = 1024;
+
+    const PositionStore = alka.ecs.StoreComponent("Position", m.Vec2f, maxent);
+    const SizeStore = alka.ecs.StoreComponent("Size", m.Vec3f, maxent);
+    const TitleStore = alka.ecs.StoreComponent("Title", []const u8, maxent);
     const World = alka.ecs.World(struct { p: PositionStore, s: SizeStore, t: TitleStore });
+
     {
         var world = try World.init(&gpa.allocator);
         defer world.deinit();
 
         var reg = try world.createRegister(0);
+        defer world.removeRegister(reg.id) catch unreachable;
 
         try reg.create();
         defer reg.destroy();

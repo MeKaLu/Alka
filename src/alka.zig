@@ -433,7 +433,7 @@ pub fn drawPixel(pos: m.Vec2f, colour: Colour) Error!void {
         if (err == Error.ObjectOverflow) {
             try pr.drawBatch(i);
             try pr.cleanBatch(i);
-            alog.notice("batch(id: {}) flushed!", .{i});
+            //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
         } else return err;
@@ -473,7 +473,7 @@ pub fn drawLine(start: m.Vec2f, end: m.Vec2f, thickness: f32, colour: Colour) Er
         if (err == Error.ObjectOverflow) {
             try pr.drawBatch(i);
             try pr.cleanBatch(i);
-            alog.notice("batch(id: {}) flushed!", .{i});
+            //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
         } else return err;
@@ -513,7 +513,7 @@ pub fn drawRectangle(rect: m.Rectangle, colour: Colour) Error!void {
         if (err == Error.ObjectOverflow) {
             try pr.drawBatch(i);
             try pr.cleanBatch(i);
-            alog.notice("batch(id: {}) flushed!", .{i});
+            //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
         } else return err;
@@ -553,7 +553,7 @@ pub fn drawRectangleLines(rect: m.Rectangle, colour: Colour) Error!void {
         if (err == Error.ObjectOverflow) {
             try pr.drawBatch(i);
             try pr.cleanBatch(i);
-            alog.notice("batch(id: {}) flushed!", .{i});
+            //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
         } else return err;
@@ -605,7 +605,7 @@ pub fn drawRectangleAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: 
         if (err == Error.ObjectOverflow) {
             try pr.drawBatch(i);
             try pr.cleanBatch(i);
-            alog.notice("batch(id: {}) flushed!", .{i});
+            //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
         } else return err;
@@ -657,7 +657,7 @@ pub fn drawRectangleLinesAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, col
         if (err == Error.ObjectOverflow) {
             try pr.drawBatch(i);
             try pr.cleanBatch(i);
-            alog.notice("batch(id: {}) flushed!", .{i});
+            //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
         } else return err;

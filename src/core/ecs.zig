@@ -22,25 +22,29 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 const UniqueList = utils.UniqueList;
+const UniqueFixedList = utils.UniqueFixedList;
 
-pub const Error = error{InvalidComponent} || utils.Error;
+pub const Error = error{ InvalidComponent, FailedtoAllocate } || utils.Error;
 
 /// Stores the component struct in a convenient way
-pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type {
+pub fn StoreComponent(comptime name: []const u8, comptime Component: type, comptime MaxEntity: usize) type {
     return struct {
         const Self = @This();
         pub const T = Component;
+        pub const TMax = MaxEntity;
         pub const Name = name;
 
         alloc: *std.mem.Allocator = undefined,
-        components: UniqueList(T) = undefined,
+        components: *UniqueFixedList(T, TMax) = undefined,
 
         /// Initializes the storage component
         pub fn init(alloc: *std.mem.Allocator) Error!Self {
-            return Self{
+            var self = Self{
                 .alloc = alloc,
-                .components = try UniqueList(T).init(alloc, 5),
+                .components = alloc.create(UniqueFixedList(T, TMax)) catch return Error.FailedtoAllocate,
             };
+            self.components.clear();
+            return self;
         }
 
         /// Adds a component
@@ -56,7 +60,7 @@ pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type 
 
         /// Returns a component
         /// NOTE: MUTABLE
-        pub fn getPtr(self: Self, id: u64) Error!*T {
+        pub fn getPtr(self: *Self, id: u64) Error!*T {
             return self.components.getPtr(id);
         }
 
@@ -72,7 +76,7 @@ pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type 
 
         /// Deinitializes the storage component
         pub fn deinit(self: Self) void {
-            self.components.deinit();
+            self.alloc.destroy(self.components);
         }
     };
 }
@@ -85,6 +89,7 @@ pub fn World(comptime Storage: type) type {
 
         const Register = struct {
             pub const Entry = struct {
+                id: u64 = undefined,
                 name: []const u8 = undefined,
                 ptr: ?u64 = null,
             };
@@ -94,12 +99,11 @@ pub fn World(comptime Storage: type) type {
             id: u64 = undefined,
 
             fn removeStorage(self: *Register, name: []const u8) Error!void {
-                var ghost = self.world.entries;
                 inline for (TNames) |tname| {
-                    const typ = @TypeOf(@field(ghost, tname));
+                    const typ = @TypeOf(@field(self.world.entries, tname));
 
                     if (std.mem.eql(u8, typ.Name, name)) {
-                        return @field(ghost, tname).remove(self.id);
+                        return @field(self.world.entries, tname).remove(self.id);
                     }
                 }
                 return Error.InvalidComponent;
@@ -107,26 +111,28 @@ pub fn World(comptime Storage: type) type {
 
             /// Creates the register
             pub fn create(self: *Register) Error!void {
-                self.attached = try UniqueList(Entry).init(self.world.alloc, TNames.len);
+                self.attached = try UniqueList(Entry).init(self.world.alloc, 0);
             }
 
             /// Attaches a component
             pub fn attach(self: *Register, name: []const u8, component: anytype) Error!void {
-                var ghost = self.world.entries;
                 inline for (TNames) |tname| {
-                    const typ = @TypeOf(@field(ghost, tname));
+                    const typ = @TypeOf(@field(self.world.entries, tname));
+                    if (std.mem.eql(u8, typ.Name, name)) {
+                        if (typ.T == @TypeOf(component)) {
+                            var storage = &@field(self.world.entries, tname);
+                            //std.log.debug("component: {}", .{component});
+                            try storage.add(self.id, component);
 
-                    if (typ.T == @TypeOf(component)) {
-                        var storage = @field(ghost, tname);
-                        try storage.add(self.id, component);
+                            const entry = Entry{
+                                .id = self.attached.findUnique(),
+                                .name = typ.Name,
+                                .ptr = @ptrToInt(try storage.getPtr(self.id)),
+                            };
 
-                        const entry = Entry{
-                            .name = typ.Name,
-                            .ptr = @ptrToInt(try storage.getPtr(self.id)),
-                        };
-
-                        //std.log.debug("{s}", .{entry});
-                        return self.attached.append(entry.ptr.?, entry);
+                            //std.log.debug("id: {}, {s}", .{ self.id, entry });
+                            return self.attached.append(entry.id, entry);
+                        }
                     }
                 }
                 return Error.InvalidComponent;
@@ -140,7 +146,7 @@ pub fn World(comptime Storage: type) type {
                         if (std.mem.eql(u8, data.name, name)) {
                             if (data.ptr) |ptr| {
                                 try self.removeStorage(name);
-                                return self.attached.remove(ptr);
+                                return self.attached.remove(data.id);
                             }
                         }
                     }
@@ -230,8 +236,11 @@ pub fn World(comptime Storage: type) type {
                 index: usize = 0,
 
                 fn getRegister(it: *_Iterator) ?*Register {
-                    if (it.world.registers.items[it.index].data) |data| {
-                        return if (data.hasThese(len, comps)) &it.world.registers.items[it.index].data.? else null;
+                    if (it.world.registers.items[it.index].data != null) {
+                        var data = &it.world.registers.items[it.index].data.?;
+                        if (data.hasThese(len, comps)) {
+                            return data;
+                        }
                     }
                     return null;
                 }
@@ -268,7 +277,7 @@ pub fn World(comptime Storage: type) type {
                 @field(self.entries, name) = try typ.init(self.alloc);
             }
 
-            self.registers = try UniqueList(Register).init(self.alloc, 0);
+            self.registers = try UniqueList(Register).init(self.alloc, 10);
 
             return self;
         }
