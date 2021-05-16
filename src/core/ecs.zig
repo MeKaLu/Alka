@@ -114,11 +114,10 @@ pub fn World(comptime Storage: type) type {
 
             /// Collects the entities
             /// Returns the entity id's
-            pub fn view(self: *const Group, comptime components: type) Error!UniqueList(u64) {
-                comptime const vcomponent_names = comptime std.meta.fieldNames(components);
+            pub fn view(self: *const Group, comptime len: usize, compnames: [len][]const u8) Error!UniqueList(u64) {
+                //comptime const vcomponent_names = comptime std.meta.fieldNames(components);
 
                 var alloc = self.alloc;
-                const ghost: components = undefined;
                 const world = self.world;
 
                 var list = try UniqueList(u64).init(alloc, 1);
@@ -128,11 +127,15 @@ pub fn World(comptime Storage: type) type {
                         const id = entry.id;
                         var hasAll = true;
 
-                        inline for (vcomponent_names) |name| {
-                            const typ = @TypeOf(@field(ghost, name));
-                            if (!try self.has(id, typ)) {
-                                hasAll = false;
-                                break;
+                        for (compnames) |cname| {
+                            inline for (component_names) |name| {
+                                const typ = @TypeOf(@field(self.registers, name));
+                                if (std.mem.eql(u8, typ.Name, cname)) {
+                                    if (!try self.has(id, typ)) {
+                                        hasAll = false;
+                                        break;
+                                    }
+                                }
                             }
                         }
 
@@ -309,9 +312,9 @@ pub fn World(comptime Storage: type) type {
 
         /// Collects the entities
         /// Returns the entity id's
-        pub fn view(self: *const Self, comptime components: type) Error!UniqueList(u64) {
+        pub fn view(self: *const Self, comptime len: usize, compnames: [len][]const u8) Error!UniqueList(u64) {
             if (self.group) |group|
-                return group.view(components);
+                return group.view(len, compnames);
             return Error.InvalidGroup;
         }
 

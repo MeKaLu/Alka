@@ -58,7 +58,8 @@ pub fn main() !void {
             try world.addComponent("entity 2", "Size", m.Vec2f{ .y = 20 });
         }
 
-        const vlist = try world.view(struct { p: PositionStore });
+        const comps = [_][]const u8{"Position"};
+        const vlist = try world.view(comps.len, comps);
         defer vlist.deinit();
 
         var it = vlist.iterator();
