@@ -80,7 +80,7 @@ pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type 
     };
 }
 
-/// World, manages the entities 
+/// World, manages the entities and groups 
 pub fn World(comptime Storage: type) type {
     return struct {
         const component_names = comptime std.meta.fieldNames(T);
@@ -125,7 +125,7 @@ pub fn World(comptime Storage: type) type {
                             inline for (component_names) |name| {
                                 const typ = @TypeOf(@field(self.registers, name));
                                 if (std.mem.eql(u8, typ.Name, cname)) {
-                                    if (!try self.has(id, typ)) {
+                                    if (!@field(self.registers, name).has(id)) {
                                         hasAll = false;
                                         break;
                                     }
@@ -161,7 +161,7 @@ pub fn World(comptime Storage: type) type {
                             inline for (component_names) |name| {
                                 const typ = @TypeOf(@field(self.registers, name));
                                 if (std.mem.eql(u8, typ.Name, cname)) {
-                                    if (!try self.has(id, typ)) {
+                                    if (!@field(self.registers, name).has(id)) {
                                         hasAll = false;
                                         break;
                                     }
