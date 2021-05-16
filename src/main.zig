@@ -37,9 +37,9 @@ pub fn main() !void {
 
     var world = try World.init(&gpa.allocator);
 
-    const ent2 = try world.entity.create("entity 2");
-    //try world.destroyEntity("entity 1");
     const ent1 = try world.entity.create("entity 1");
+    const ent2 = try world.entity.create("entity 2");
+    const ent4 = try world.entity.create("entity 4");
     mlog.warn("ent1 has pos: {}, ent2: {}", .{ ent1, ent2 });
 
     {
@@ -49,24 +49,21 @@ pub fn main() !void {
         world.pushGroup(&group);
         defer world.popGroup();
         {
-            try world.addComponent("entity 1", "Position", m.Vec2f{ .x = 20 });
+            //try world.addComponent("entity 1", "Position", m.Vec2f{ .x = 20 });
+            try world.addComponent("entity 2", "Position", m.Vec2f{ .x = 20 });
+            try world.addComponent("entity 4", "Position", m.Vec2f{ .x = 20 });
             // try world.removeComponent("entity 1", "Position");
 
-            var ptr = try world.getComponentPtr("entity 1", "Position", m.Vec2f);
-            ptr.x = 15.25;
-
-            const a = try world.getComponent("entity 1", "Position", m.Vec2f);
-            mlog.warn("{d:.2}", .{a.x});
         }
 
         const comps = [_][]const u8{"Position"};
-        const vlist = try world.view(comps.len, comps);
-        defer vlist.deinit();
+        //const vlist = try world.view(comps.len, comps);
+        //defer vlist.deinit();
 
-        var it = vlist.iterator();
+        var it = World.Group.iterator(comps.len, comps){ .group = group };
         while (it.next()) |entity| {
-            //if (entity.data) |id|
-            //mlog.info("view id: {}", .{id});
+            if (entity.value) |id|
+                mlog.info("view id: {}", .{id});
         }
     }
     world.deinit();

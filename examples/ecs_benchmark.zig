@@ -11,6 +11,7 @@ const ColourStore = alka.ecs.StoreComponent("Colour", alka.Colour);
 const World = alka.ecs.World(struct { r: RectangleStore, col: ColourStore });
 
 var world: World = undefined;
+var group: World.Group = undefined;
 
 fn update(dt: f32) !void {
     //mlog.debug("fps: {}", .{alka.getFps()});
@@ -18,11 +19,22 @@ fn update(dt: f32) !void {
 
 fn draw() !void {
     const comps = [_][]const u8{"Position"};
-    const vlist = try world.viewFixed(1024 * 5, comps.len, comps);
+    //   const vlist = try world.viewFixed(1024 * 5, comps.len, comps);
 
-    var i: usize = 0;
-    while (i < vlist.len) : (i += 1) {
-        if (vlist[i]) |id| {
+    //var i: usize = 0;
+    //while (i < vlist.len) : (i += 1) {
+    //    if (vlist[i]) |id| {
+    //        const rect = try world.getComponentID(id, "Rectangle", m.Rectangle);
+    //        const col = try world.getComponentID(id, "Colour", alka.Colour);
+    //
+    //            try alka.drawRectangle(rect, col);
+    //        }
+    //    }
+
+    var it = World.Group.iterator(comps.len, comps){ .group = group };
+    while (it.next()) |entity| {
+        if (it.index > 1024 * 5) break;
+        if (entity.value) |id| {
             const rect = try world.getComponentID(id, "Rectangle", m.Rectangle);
             const col = try world.getComponentID(id, "Colour", alka.Colour);
 
@@ -54,14 +66,14 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(&gpa.allocator, callbacks, 1024, 768, "title go brrr", 0, false);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "title go brrr", 1000, false);
 
     try alka.getAssetManager().loadFont(0, "assets/arial.ttf", 128);
     const font = try alka.getAssetManager().getFont(0);
     font.texture.setFilter(alka.gl.TextureParamater.filter_mipmap_nearest, alka.gl.TextureParamater.filter_linear);
 
     world = try World.init(&gpa.allocator);
-    var group = try World.Group.create(&world);
+    group = try World.Group.create(&world);
     world.pushGroup(&group);
     {
         var i: u64 = 1;

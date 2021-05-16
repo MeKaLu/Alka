@@ -33,9 +33,6 @@ pub fn UniqueList(comptime generic_type: type) type {
             id: u64 = 0,
         };
 
-        alloc: *std.mem.Allocator = undefined,
-        items: []Item = undefined,
-
         /// Iterator
         pub const Iterator = struct {
             parent: *const Self = undefined,
@@ -53,6 +50,9 @@ pub fn UniqueList(comptime generic_type: type) type {
                 it.index = 0;
             }
         };
+
+        alloc: *std.mem.Allocator = undefined,
+        items: []Item = undefined,
 
         /// Initializes the UniqueList
         pub fn init(alloc: *std.mem.Allocator, reserve: usize) Error!Self {

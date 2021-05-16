@@ -27,12 +27,9 @@ pub const Error = error{ InvalidComponent, InvalidEntity, InvalidEntityID, Inval
 
 /// Stores the component struct in a convenient way
 pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type {
-    comptime const is_empty = @sizeOf(Component) == 0;
-    comptime const ComponentOrDummy = if (is_empty) struct { dummy: u1 } else Component;
-
     return struct {
         const Self = @This();
-        pub const T = ComponentOrDummy;
+        pub const T = Component;
         pub const Name = name;
 
         alloc: *std.mem.Allocator = undefined,
@@ -90,6 +87,55 @@ pub fn World(comptime Storage: type) type {
 
         /// Group of the StorageComponents
         pub const Group = struct {
+
+            /// Iterator
+            pub fn Iterator(comptime len: usize, compmask: [len][]const u8) type {
+                return struct {
+                    group: Group = undefined,
+                    index: usize = 0,
+                    mask: [len][]const u8 = compmask,
+
+                    pub const Entry = struct {
+                        value: ?u64 = 0,
+                        index: usize = 0,
+                    };
+
+                    fn getID(it: @This()) ?u64 {
+                        if (it.group.world.entity.registers.items[it.index].data != null) {
+                            const id = it.group.world.entity.registers.items[it.index].id;
+
+                            for (it.mask) |cname| {
+                                inline for (component_names) |name| {
+                                    const typ = @TypeOf(@field(it.group.registers, name));
+                                    if (std.mem.eql(u8, typ.Name, cname)) {
+                                        if (!@field(it.group.registers, name).has(id)) {
+                                            return null;
+                                        }
+                                    }
+                                }
+                            }
+
+                            return id;
+                        }
+                        return null;
+                    }
+
+                    pub fn next(it: *@This()) ?Entry {
+                        if (it.index >= it.group.world.entity.registers.items.len) return null;
+
+                        const result = Entry{ .value = it.getID(), .index = it.index };
+                        it.index += 1;
+
+                        return result;
+                    }
+
+                    /// Reset the iterator
+                    pub fn reset(it: *@This()) void {
+                        it.index = 0;
+                    }
+                };
+            }
+
             alloc: *std.mem.Allocator = undefined,
             world: *const Self = undefined,
             registers: T = undefined,
@@ -115,8 +161,8 @@ pub fn World(comptime Storage: type) type {
                 const world = self.world;
 
                 var list = try UniqueList(u64).init(alloc, 0);
-                var iterator = world.entity.registers.iterator();
-                while (iterator.next()) |entry| {
+                var it = world.entity.registers.iterator();
+                while (it.next()) |entry| {
                     if (entry.data != null) {
                         const id = entry.id;
                         var hasAll = true;
@@ -135,7 +181,7 @@ pub fn World(comptime Storage: type) type {
 
                         if (hasAll) {
                             //std.log.info("loading: {}", .{iterator.index});
-                            try list.append(iterator.index, id);
+                            try list.append(it.index, id);
                         }
                     }
                 }
@@ -149,9 +195,9 @@ pub fn World(comptime Storage: type) type {
                 const world = self.world;
 
                 var list: [max_ent]?u64 = undefined;
-                var iterator = world.entity.registers.iterator();
-                while (iterator.next()) |entry| {
-                    if (iterator.index >= max_ent) break;
+                var it = world.entity.registers.iterator();
+                while (it.next()) |entry| {
+                    if (it.index >= max_ent) break;
 
                     if (entry.data != null) {
                         const id = entry.id;
@@ -171,11 +217,19 @@ pub fn World(comptime Storage: type) type {
 
                         if (hasAll) {
                             //std.log.info("loading: {}", .{iterator.index});
-                            list[iterator.index] = id;
+                            list[it.index] = id;
                         }
                     }
                 }
                 return list;
+            }
+
+            /// Returns the iterator
+            pub fn iterator(comptime len: usize, compnames: [len][]const u8) type {
+                return Iterator(
+                    len,
+                    compnames,
+                );
             }
 
             /// Adds a component
@@ -376,7 +430,7 @@ pub fn World(comptime Storage: type) type {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
                         if (typ.T == @TypeOf(component))
-                            return group.add(id, typ, component);
+                            return @field(group.registers, name).add(id, component);
                     }
                 }
                 return Error.InvalidComponent;
@@ -394,7 +448,7 @@ pub fn World(comptime Storage: type) type {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
                         if (typ.T == @TypeOf(component))
-                            return group.add(id, typ, component);
+                            return @field(group.registers, name).add(id, component);
                     }
                 }
                 return Error.InvalidComponent;
@@ -412,7 +466,7 @@ pub fn World(comptime Storage: type) type {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
                         if (typ.T == component_type)
-                            return group.get(id, typ);
+                            return @field(group.registers, name).get(id);
                     }
                 }
                 return Error.InvalidComponent;
@@ -431,7 +485,7 @@ pub fn World(comptime Storage: type) type {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
                         if (typ.T == component_type)
-                            return group.get(id, typ);
+                            return @field(group.registers, name).get(id);
                     }
                 }
                 return Error.InvalidComponent;
@@ -449,7 +503,7 @@ pub fn World(comptime Storage: type) type {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
                         if (typ.T == component_type)
-                            return group.getPtr(id, typ);
+                            return @field(group.registers, name).getPtr(id);
                     }
                 }
                 return Error.InvalidComponent;
@@ -468,7 +522,7 @@ pub fn World(comptime Storage: type) type {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
                         if (typ.T == component_type)
-                            return group.getPtr(id, typ);
+                            return @field(group.registers, name).getPtr(id);
                     }
                 }
                 return Error.InvalidComponent;
@@ -484,7 +538,7 @@ pub fn World(comptime Storage: type) type {
                 inline for (component_names) |name| {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
-                        return group.remove(id, typ);
+                        return @field(group.registers, name).remove(id);
                     }
                 }
                 return Error.InvalidComponent;
@@ -501,7 +555,7 @@ pub fn World(comptime Storage: type) type {
                 inline for (component_names) |name| {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
-                        return group.remove(id, typ);
+                        return @field(group.registers, name).remove(id);
                     }
                 }
                 return Error.InvalidComponent;
