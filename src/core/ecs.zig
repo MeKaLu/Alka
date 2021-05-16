@@ -23,7 +23,7 @@ const std = @import("std");
 const utils = @import("utils.zig");
 const UniqueList = utils.UniqueList;
 
-pub const Error = error{ InvalidComponent, InvalidEntity, InvalidEntityID, InvalidEntityName, InvalidGroup } || utils.Error;
+pub const Error = error{InvalidComponent} || utils.Error;
 
 /// Stores the component struct in a convenient way
 pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type {
@@ -77,586 +77,241 @@ pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type 
     };
 }
 
-/// World, manages the entities and groups 
 pub fn World(comptime Storage: type) type {
     return struct {
-        const component_names = comptime std.meta.fieldNames(T);
-        const Self = @This();
-        /// Storage component types
+        const TNames = comptime std.meta.fieldNames(T);
+        const _World = @This();
         pub const T = Storage;
 
-        /// Group of the StorageComponents
-        pub const Group = struct {
+        const Register = struct {
+            pub const Entry = struct {
+                name: []const u8 = undefined,
+                ptr: ?u64 = null,
+            };
 
-            /// Iterator
-            pub fn Iterator(comptime len: usize, compmask: [len][]const u8) type {
-                return struct {
-                    group: Group = undefined,
-                    index: usize = 0,
-                    mask: [len][]const u8 = compmask,
+            world: *_World = undefined,
+            attached: UniqueList(Entry) = undefined,
+            id: u64 = undefined,
 
-                    pub const Entry = struct {
-                        value: ?u64 = 0,
-                        index: usize = 0,
-                    };
+            fn removeStorage(self: *Register, name: []const u8) Error!void {
+                var ghost = self.world.entries;
+                inline for (TNames) |tname| {
+                    const typ = @TypeOf(@field(ghost, tname));
 
-                    fn getID(it: @This()) ?u64 {
-                        if (it.group.world.entity.registers.items[it.index].data != null) {
-                            const id = it.group.world.entity.registers.items[it.index].id;
-
-                            for (it.mask) |cname| {
-                                inline for (component_names) |name| {
-                                    const typ = @TypeOf(@field(it.group.registers, name));
-                                    if (std.mem.eql(u8, typ.Name, cname)) {
-                                        if (!@field(it.group.registers, name).has(id)) {
-                                            return null;
-                                        }
-                                    }
-                                }
-                            }
-
-                            return id;
-                        }
-                        return null;
-                    }
-
-                    pub fn next(it: *@This()) ?Entry {
-                        if (it.index >= it.group.world.entity.registers.items.len) return null;
-
-                        const result = Entry{ .value = it.getID(), .index = it.index };
-                        it.index += 1;
-
-                        return result;
-                    }
-
-                    /// Reset the iterator
-                    pub fn reset(it: *@This()) void {
-                        it.index = 0;
-                    }
-                };
-            }
-
-            alloc: *std.mem.Allocator = undefined,
-            world: *const Self = undefined,
-            registers: T = undefined,
-
-            /// Creates the group
-            pub fn create(self: *const Self) Error!Group {
-                var result = Group{
-                    .alloc = self.alloc,
-                    .world = self,
-                };
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(result.registers, name));
-                    @field(result.registers, name) = try typ.init(result.alloc);
-                }
-                return result;
-            }
-
-            /// Collects the entities
-            /// Returns the entity id's
-            pub fn view(self: *const Group, comptime len: usize, compnames: [len][]const u8) Error!UniqueList(u64) {
-                var alloc = self.alloc;
-                const world = self.world;
-
-                var list = try UniqueList(u64).init(alloc, 0);
-                var it = world.entity.registers.iterator();
-                while (it.next()) |entry| {
-                    if (entry.data != null) {
-                        const id = entry.id;
-                        var hasAll = true;
-
-                        for (compnames) |cname| {
-                            inline for (component_names) |name| {
-                                const typ = @TypeOf(@field(self.registers, name));
-                                if (std.mem.eql(u8, typ.Name, cname)) {
-                                    if (!@field(self.registers, name).has(id)) {
-                                        hasAll = false;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (hasAll) {
-                            //std.log.info("loading: {}", .{iterator.index});
-                            try list.append(it.index, id);
-                        }
-                    }
-                }
-                return list;
-            }
-
-            /// Collects the entities
-            /// Returns the entity id's
-            pub fn viewFixed(self: *const Group, comptime max_ent: usize, comptime len: usize, compnames: [len][]const u8) Error![max_ent]?u64 {
-                var alloc = self.alloc;
-                const world = self.world;
-
-                var list: [max_ent]?u64 = undefined;
-                var it = world.entity.registers.iterator();
-                while (it.next()) |entry| {
-                    if (it.index >= max_ent) break;
-
-                    if (entry.data != null) {
-                        const id = entry.id;
-                        var hasAll = true;
-
-                        for (compnames) |cname| {
-                            inline for (component_names) |name| {
-                                const typ = @TypeOf(@field(self.registers, name));
-                                if (std.mem.eql(u8, typ.Name, cname)) {
-                                    if (!@field(self.registers, name).has(id)) {
-                                        hasAll = false;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (hasAll) {
-                            //std.log.info("loading: {}", .{iterator.index});
-                            list[it.index] = id;
-                        }
-                    }
-                }
-                return list;
-            }
-
-            /// Returns the iterator
-            pub fn iterator(comptime len: usize, compnames: [len][]const u8) type {
-                return Iterator(
-                    len,
-                    compnames,
-                );
-            }
-
-            /// Adds a component
-            pub fn add(self: *Group, entity_id: u64, comptime storage_component_type: type, component: storage_component_type.T) Error!void {
-                if (!self.world.entity.hasID(entity_id)) return Error.InvalidEntityID;
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(self.registers, name));
-                    if (typ == storage_component_type) {
-                        return @field(self.registers, name).add(entity_id, component);
+                    if (std.mem.eql(u8, typ.Name, name)) {
+                        return @field(ghost, tname).remove(self.id);
                     }
                 }
                 return Error.InvalidComponent;
             }
 
-            /// Returns the desired component
-            /// NOTE: READ ONLY
-            pub fn get(self: Group, entity_id: u64, comptime storage_component_type: type) Error!storage_component_type.T {
-                if (!self.world.entity.hasID(entity_id)) return Error.InvalidEntityID;
+            /// Creates the register
+            pub fn create(self: *Register) Error!void {
+                self.attached = try UniqueList(Entry).init(self.world.alloc, TNames.len);
+            }
 
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(self.registers, name));
-                    if (typ == storage_component_type) {
-                        return @field(self.registers, name).get(entity_id);
+            /// Attaches a component
+            pub fn attach(self: *Register, name: []const u8, component: anytype) Error!void {
+                var ghost = self.world.entries;
+                inline for (TNames) |tname| {
+                    const typ = @TypeOf(@field(ghost, tname));
+
+                    if (typ.T == @TypeOf(component)) {
+                        var storage = @field(ghost, tname);
+                        try storage.add(self.id, component);
+
+                        const entry = Entry{
+                            .name = typ.Name,
+                            .ptr = @ptrToInt(try storage.getPtr(self.id)),
+                        };
+
+                        //std.log.debug("{s}", .{entry});
+                        return self.attached.append(entry.ptr.?, entry);
                     }
                 }
                 return Error.InvalidComponent;
             }
 
-            /// Returns the desired component
+            /// Detaches a component
+            pub fn detach(self: *Register, name: []const u8) Error!void {
+                var it = self.attached.iterator();
+                while (it.next()) |entry| {
+                    if (entry.data) |data| {
+                        if (std.mem.eql(u8, data.name, name)) {
+                            if (data.ptr) |ptr| {
+                                try self.removeStorage(name);
+                                return self.attached.remove(ptr);
+                            }
+                        }
+                    }
+                }
+                return Error.InvalidComponent;
+            }
+
+            /// Returns the attached component
+            /// NOTE: READ-ONLY
+            pub fn get(self: Register, name: []const u8, comptime ctype: type) Error!ctype {
+                var it = self.attached.iterator();
+                while (it.next()) |entry| {
+                    if (entry.data) |data| {
+                        if (std.mem.eql(u8, data.name, name)) {
+                            if (data.ptr) |ptr| {
+                                var component = @intToPtr(*ctype, ptr);
+                                return component.*;
+                            }
+                        }
+                    }
+                }
+                return Error.InvalidComponent;
+            }
+
+            /// Returns the attached component
             /// NOTE: MUTABLE 
-            pub fn getPtr(self: *Group, entity_id: u64, comptime storage_component_type: type) Error!*storage_component_type.T {
-                if (!self.world.entity.hasID(entity_id)) return Error.InvalidEntityID;
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(self.registers, name));
-                    if (typ == storage_component_type) {
-                        return @field(self.registers, name).getPtr(entity_id);
+            pub fn getPtr(self: Register, name: []const u8, comptime ctype: type) Error!*ctype {
+                var it = self.attached.iterator();
+                while (it.next()) |entry| {
+                    if (entry.data) |data| {
+                        if (std.mem.eql(u8, data.name, name)) {
+                            if (data.ptr) |ptr| {
+                                var component = @intToPtr(*ctype, ptr);
+                                return component;
+                            }
+                        }
                     }
                 }
                 return Error.InvalidComponent;
             }
 
-            /// Is the component exists in side of the given entity?
-            pub fn has(self: Group, entity_id: u64, comptime storage_component_type: type) Error!bool {
-                if (!self.world.entity.hasID(entity_id)) return Error.InvalidEntityID;
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(self.registers, name));
-                    if (typ == storage_component_type) {
-                        return @field(self.registers, name).has(entity_id);
+            /// Has the component?
+            pub fn has(self: Register, component: []const u8) bool {
+                var it = self.attached.iterator();
+                while (it.next()) |entry| {
+                    if (entry.data) |data| {
+                        if (std.mem.eql(u8, data.name, component)) {
+                            return true;
+                        }
                     }
                 }
                 return false;
             }
 
-            /// Removes a component
-            pub fn remove(self: *Group, entity_id: u64, comptime storage_component_type: type) Error!void {
-                if (!self.world.entity.hasID(entity_id)) return Error.InvalidEntityID;
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(self.registers, name));
-                    if (typ == storage_component_type) {
-                        return @field(self.registers, name).remove(entity_id);
+            /// Has these components?
+            pub fn hasThese(self: Register, comptime len: usize, complist: [len][]const u8) bool {
+                for (complist) |comp| {
+                    var it = self.attached.iterator();
+                    while (it.next()) |entry| {
+                        if (entry.data) |data| {
+                            if (!self.has(comp)) {
+                                return false;
+                            }
+                        }
                     }
                 }
-                return Error.InvalidComponent;
+                return true;
             }
 
-            /// Destroys the group
-            pub fn destroy(self: Group) void {
-                inline for (component_names) |name| {
-                    @field(self.registers, name).deinit();
-                }
+            /// Destroys the register
+            pub fn destroy(self: Register) void {
+                self.attached.deinit();
             }
         };
 
-        pub const Entity = struct {
-            alloc: *std.mem.Allocator = undefined,
-            registers: UniqueList([]const u8) = undefined,
+        /// Iterator
+        fn Iterator(comptime len: usize, comps: [len][]const u8) type {
+            return struct {
+                const _Iterator = @This();
 
-            /// Creates an entity with unique name and
-            /// returns the unique id of the entity
-            pub fn create(self: *Entity, name: []const u8) Error!u64 {
-                if (self.has(name)) return Error.InvalidEntityName;
+                pub const Entry = struct {
+                    value: ?*Register = 0,
+                    index: usize = 0,
+                };
 
-                const id = self.registers.findUnique();
-                try self.registers.append(id, name);
-                return id;
-            }
+                world: *_World = undefined,
+                index: usize = 0,
 
-            /// Creates an entity with unique id
-            pub fn createID(self: *Entity, id: u64) Error!void {
-                if (self.hasID(id)) return Error.InvalidEntityID;
-
-                var name = std.fmt.allocPrint(self.alloc, "alka_private{}", .{id}) catch @panic("Allocation failed!");
-                defer self.alloc.free(name);
-                try self.registers.append(id, name);
-            }
-
-            /// Destroys an entity with given name
-            pub fn destroy(self: *Entity, name: []const u8) Error!void {
-                const i = try self.hasNameID(name);
-
-                return self.registers.remove(i);
-            }
-
-            /// Destroys an entity with given ID
-            pub fn destroyID(self: *Entity, id: u64) Error!void {
-                const i = if (self.hasID(id)) id else Error.InvalidEntityID;
-
-                return self.registers.remove(i);
-            }
-
-            /// Is the entity with given name exists? 
-            pub fn has(self: Entity, name: []const u8) bool {
-                var it = self.registers.iterator();
-                while (it.next()) |entry| {
-                    if (entry.data) |data| {
-                        if (std.mem.eql(u8, data, name)) return true;
+                fn getRegister(it: *_Iterator) ?*Register {
+                    if (it.world.registers.items[it.index].data) |data| {
+                        return if (data.hasThese(len, comps)) &it.world.registers.items[it.index].data.? else null;
                     }
+                    return null;
                 }
 
-                return false;
-            }
+                pub fn next(it: *_Iterator) ?Entry {
+                    if (it.index >= it.world.registers.items.len) return null;
 
-            /// Is the entity with given name exists?
-            /// Returns the id of it, if it does not exists, returns Error.InvalidEntity 
-            pub fn hasNameID(self: Entity, name: []const u8) Error!u64 {
-                var it = self.registers.iterator();
-                while (it.next()) |entry| {
-                    if (entry.data) |data| {
-                        if (std.mem.eql(u8, data, name)) return entry.id;
-                    }
+                    const result = Entry{ .value = it.getRegister(), .index = it.index };
+                    it.index += 1;
+
+                    return result;
                 }
 
-                return Error.InvalidEntity;
-            }
-
-            /// Is the entity with given id exists?
-            pub fn hasID(self: Entity, id: u64) bool {
-                var it = self.registers.iterator();
-                while (it.next()) |entry| {
-                    if (entry.id == id) return true;
+                /// Reset the iterator
+                pub fn reset(it: *_Iterator) void {
+                    it.index = 0;
                 }
-
-                return false;
-            }
-        };
-
-        alloc: *std.mem.Allocator = undefined,
-        entity: Entity = undefined,
-        group: ?*Group = null,
-        current_entity: ?u64 = null,
-
-        /// Initializes the world
-        pub fn init(alloc: *std.mem.Allocator) Error!Self {
-            return Self{
-                .alloc = alloc,
-                .entity = Entity{
-                    .alloc = alloc,
-                    .registers = try UniqueList([]const u8).init(alloc, 5),
-                },
             };
         }
 
-        /// Pushes the group
-        pub fn pushGroup(self: *Self, group: *Group) void {
-            self.group = group;
-        }
+        alloc: *std.mem.Allocator = undefined,
+        entries: T = undefined,
+        registers: UniqueList(Register) = undefined,
 
-        /// Pops the group 
-        pub fn popGroup(self: *Self) void {
-            self.group = null;
-        }
+        /// Initializes the world
+        pub fn init(alloc: *std.mem.Allocator) Error!_World {
+            var self = _World{
+                .alloc = alloc,
+                .entries = undefined,
+            };
 
-        /// Collects the entities
-        /// Returns the entity id's
-        pub fn view(self: *const Self, comptime len: usize, compnames: [len][]const u8) Error!UniqueList(u64) {
-            if (self.group) |group|
-                return group.view(len, compnames);
-            return Error.InvalidGroup;
-        }
-
-        /// Collects the entities
-        /// Returns the entity id's
-        pub fn viewFixed(self: *const Self, comptime max_ent: usize, comptime len: usize, compnames: [len][]const u8) Error![max_ent]?u64 {
-            if (self.group) |group|
-                return group.viewFixed(max_ent, len, compnames);
-            return Error.InvalidGroup;
-        }
-
-        /// Pushes the entity
-        pub fn pushEntityName(self: *Self, entity_name: []const u8) Error!void {
-            const id = try self.entity.hasNameID(entity_name);
-            self.current_entity = id;
-        }
-
-        /// Pushes the entity
-        pub fn pushEntityID(self: *Self, entity_id: u64) Error!void {
-            if (!self.entity.hasID(entity_id)) return Error.InvalidEntityID;
-            self.current_entity = entity_id;
-        }
-
-        /// Pops the entity
-        pub fn popEntity(self: *Self) void {
-            self.current_entity = null;
-        }
-
-        /// Adds a component to the entity
-        pub fn addComponent(self: *Self, component_name: []const u8, component: anytype) Error!void {
-            if (self.group) |group| {
-                if (self.current_entity) |id| {
-                    inline for (component_names) |name| {
-                        const typ = @TypeOf(@field(group.registers, name));
-                        if (std.mem.eql(u8, component_name, typ.Name)) {
-                            if (typ.T == @TypeOf(component))
-                                return @field(group.registers, name).add(id, component);
-                        }
-                    }
-                    return Error.InvalidComponent;
-                }
-                return Error.InvalidEntity;
+            inline for (TNames) |name| {
+                const typ = @TypeOf(@field(self.entries, name));
+                @field(self.entries, name) = try typ.init(self.alloc);
             }
-            return Error.InvalidGroup;
+
+            self.registers = try UniqueList(Register).init(self.alloc, 0);
+
+            return self;
         }
 
-        /// Adds a component to the entity
-        pub fn addComponentName(self: *Self, entity_name: []const u8, component_name: []const u8, component: anytype) Error!void {
-            if (self.group) |group| {
-                const id = try self.entity.hasNameID(entity_name);
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(group.registers, name));
-                    if (std.mem.eql(u8, component_name, typ.Name)) {
-                        if (typ.T == @TypeOf(component))
-                            return @field(group.registers, name).add(id, component);
-                    }
-                }
-                return Error.InvalidComponent;
-            }
-            return Error.InvalidGroup;
+        /// Creates an iterator
+        pub fn iterator(comptime len: usize, complist: [len][]const u8) type {
+            return Iterator(len, complist);
         }
 
-        /// Adds a component to the entity
-        pub fn addComponentID(self: *Self, entity_id: u64, component_name: []const u8, component: anytype) Error!void {
-            if (self.group) |group| {
-                if (!self.entity.hasID(entity_id)) return Error.InvalidEntityID;
-                const id = entity_id;
+        /// Creates a register
+        pub fn createRegister(self: *_World, id: u64) Error!*Register {
+            var reg = Register{
+                .world = self,
+                .id = id,
+            };
+            try self.registers.append(reg.id, reg);
 
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(group.registers, name));
-                    if (std.mem.eql(u8, component_name, typ.Name)) {
-                        if (typ.T == @TypeOf(component))
-                            return @field(group.registers, name).add(id, component);
-                    }
-                }
-                return Error.InvalidComponent;
-            }
-            return Error.InvalidGroup;
+            return self.registers.getPtr(reg.id);
         }
 
-        /// Returns the desired component
-        /// NOTE: READ ONLY
-        pub fn getComponent(self: *Self, component_name: []const u8, comptime component_type: type) Error!component_type {
-            if (self.group) |group| {
-                if (self.current_entity) |id| {
-                    inline for (component_names) |name| {
-                        const typ = @TypeOf(@field(group.registers, name));
-                        if (std.mem.eql(u8, component_name, typ.Name)) {
-                            if (typ.T == component_type)
-                                return @field(group.registers, name).get(id);
-                        }
-                    }
-                    return Error.InvalidComponent;
-                }
-                return Error.InvalidEntity;
-            }
-            return Error.InvalidGroup;
+        /// Returns a register
+        /// NOTE: READ-ONLY 
+        pub fn getRegister(self: _World, id: u64) Error!Register {
+            return self.registers.get(id);
         }
 
-        /// Returns the desired component
-        /// NOTE: READ ONLY
-        pub fn getComponentName(self: *Self, entity_name: []const u8, component_name: []const u8, comptime component_type: type) Error!component_type {
-            if (self.group) |group| {
-                const id = try self.entity.hasNameID(entity_name);
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(group.registers, name));
-                    if (std.mem.eql(u8, component_name, typ.Name)) {
-                        if (typ.T == component_type)
-                            return @field(group.registers, name).get(id);
-                    }
-                }
-                return Error.InvalidComponent;
-            }
-            return Error.InvalidGroup;
-        }
-
-        /// Returns the desired component
-        /// NOTE: READ ONLY
-        pub fn getComponentID(self: *Self, entity_id: u64, component_name: []const u8, comptime component_type: type) Error!component_type {
-            if (self.group) |group| {
-                if (!self.entity.hasID(entity_id)) return Error.InvalidEntityID;
-                const id = entity_id;
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(group.registers, name));
-                    if (std.mem.eql(u8, component_name, typ.Name)) {
-                        if (typ.T == component_type)
-                            return @field(group.registers, name).get(id);
-                    }
-                }
-                return Error.InvalidComponent;
-            }
-            return Error.InvalidGroup;
-        }
-
-        /// Returns the desired component
+        /// Returns a register
         /// NOTE: MUTABLE 
-        pub fn getComponentPtr(self: *Self, component_name: []const u8, comptime component_type: type) Error!*component_type {
-            if (self.group) |group| {
-                if (self.current_entity) |id| {
-                    inline for (component_names) |name| {
-                        const typ = @TypeOf(@field(group.registers, name));
-                        if (std.mem.eql(u8, component_name, typ.Name)) {
-                            if (typ.T == component_type)
-                                return @field(group.registers, name).getPtr(id);
-                        }
-                    }
-                    return Error.InvalidComponent;
-                }
-                return Error.InvalidEntity;
-            }
-            return Error.InvalidGroup;
+        pub fn getRegisterPtr(self: *_World, id: u64) Error!*Register {
+            return self.registers.getPtr(id);
         }
 
-        /// Returns the desired component
-        /// NOTE: MUTABLE 
-        pub fn getComponentPtrName(self: *Self, entity_name: []const u8, component_name: []const u8, comptime component_type: type) Error!*component_type {
-            if (self.group) |group| {
-                const id = try self.entity.hasNameID(entity_name);
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(group.registers, name));
-                    if (std.mem.eql(u8, component_name, typ.Name)) {
-                        if (typ.T == component_type)
-                            return @field(group.registers, name).getPtr(id);
-                    }
-                }
-                return Error.InvalidComponent;
-            }
-            return Error.InvalidGroup;
-        }
-
-        /// Returns the desired component
-        /// NOTE: MUTABLE 
-        pub fn getComponentPtrID(self: *Self, entity_id: u64, component_name: []const u8, comptime component_type: type) Error!*component_type {
-            if (self.group) |group| {
-                if (!self.entity.hasID(entity_id)) return Error.InvalidEntityID;
-                const id = entity_id;
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(group.registers, name));
-                    if (std.mem.eql(u8, component_name, typ.Name)) {
-                        if (typ.T == component_type)
-                            return @field(group.registers, name).getPtr(id);
-                    }
-                }
-                return Error.InvalidComponent;
-            }
-            return Error.InvalidGroup;
-        }
-
-        /// Removes a component to the entity
-        pub fn removeComponent(self: *Self, component_name: []const u8) Error!void {
-            if (self.group) |group| {
-                if (self.current_entity) |id| {
-                    inline for (component_names) |name| {
-                        const typ = @TypeOf(@field(group.registers, name));
-                        if (std.mem.eql(u8, component_name, typ.Name)) {
-                            return @field(group.registers, name).remove(id);
-                        }
-                    }
-                    return Error.InvalidComponent;
-                }
-                return Error.InvalidEntity;
-            }
-            return Error.InvalidGroup;
-        }
-
-        /// Removes a component to the entity
-        pub fn removeComponentName(self: *Self, entity_name: []const u8, component_name: []const u8) Error!void {
-            if (self.group) |group| {
-                const id = try self.entity.hasNameID(entity_name);
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(group.registers, name));
-                    if (std.mem.eql(u8, component_name, typ.Name)) {
-                        return @field(group.registers, name).remove(id);
-                    }
-                }
-                return Error.InvalidComponent;
-            }
-            return Error.InvalidGroup;
-        }
-
-        /// Removes a component to the entity
-        pub fn removeComponentID(self: *Self, entity_id: u64, component_name: []const u8) Error!void {
-            if (self.group) |group| {
-                if (!self.entity.hasID(entity_id)) return Error.InvalidEntityID;
-                const id = entity_id;
-
-                inline for (component_names) |name| {
-                    const typ = @TypeOf(@field(group.registers, name));
-                    if (std.mem.eql(u8, component_name, typ.Name)) {
-                        return @field(group.registers, name).remove(id);
-                    }
-                }
-                return Error.InvalidComponent;
-            }
-            return Error.InvalidGroup;
+        /// Removes a register
+        pub fn removeRegister(self: *_World, id: u64) Error!void {
+            return self.registers.remove(id);
         }
 
         /// Deinitializes the world
-        pub fn deinit(self: Self) void {
-            self.entity.registers.deinit();
+        pub fn deinit(self: _World) void {
+            self.registers.deinit();
+            inline for (TNames) |name| {
+                @field(self.entries, name).deinit();
+            }
         }
     };
 }
