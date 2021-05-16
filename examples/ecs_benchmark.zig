@@ -53,16 +53,49 @@ fn draw() !void {
         }
     }
 
-    var it = World.Group.iterator(comps.len, comps){ .group = group };
-    while (it.next()) |entity| {
-        if (it.index > 1024 * 5) break;
-        if (entity.value) |id| {
-            try world.pushEntityID(id);
+    // bad, just not bad as view()
+    if (1 == 0) {
+        var it = World.Group.iterator(comps.len, comps){ .group = group };
+        while (it.next()) |entity| {
+            if (it.index > 1024 * 5) break;
+            if (entity.value) |id| {
+                try world.pushEntityID(id);
 
-            const rect = try world.getComponent("Rectangle", m.Rectangle);
-            const col = try world.getComponent("Colour", alka.Colour);
+                const rect = try world.getComponent("Rectangle", m.Rectangle);
+                const col = try world.getComponent("Colour", alka.Colour);
 
-            try alka.drawRectangle(rect, col);
+                try alka.drawRectangle(rect, col);
+            }
+        }
+    }
+
+    // better than iterator
+    if (1 == 1) {
+        var it = world.entity.registers.iterator();
+        while (it.next()) |entry| {
+            if (it.index > 1024 * 5) break;
+            if (entry.data != null) {
+                const component_names = comptime std.meta.fieldNames(World.T);
+
+                const id = entry.id;
+
+                var hasAll = true;
+                var rect: m.Rectangle = undefined;
+                var col: alka.Colour = undefined;
+
+                inline for (component_names) |name| {
+                    const typ = @TypeOf(@field(group.registers, name));
+                    if (typ == RectangleStore) {
+                        rect = try @field(group.registers, name).get(id);
+                    } else if (typ == ColourStore) {
+                        col = try @field(group.registers, name).get(id);
+                    } else hasAll = false;
+                }
+
+                if (hasAll) {
+                    try alka.drawRectangle(rect, col);
+                }
+            }
         }
     }
 

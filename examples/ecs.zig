@@ -1,5 +1,5 @@
 const std = @import("std");
-const alka = @import("alka.zig");
+const alka = @import("alka");
 const m = alka.math;
 
 usingnamespace alka.log;
