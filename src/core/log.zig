@@ -1,7 +1,3 @@
-// -----------------------------------------
-// |           Alka 1.0.0                  |
-// -----------------------------------------
-//
 //Copyright © 2020-2021 Mehmet Kaan Uluç <kaanuluc@protonmail.com>
 //
 //This software is provided 'as-is', without any express or implied
