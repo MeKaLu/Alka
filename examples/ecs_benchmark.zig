@@ -7,8 +7,10 @@ pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .debug;
 
 const RectangleStore = alka.ecs.StoreComponent("Rectangle", m.Rectangle, maxent);
+const SpeedStore = alka.ecs.StoreComponent("Speed", f32, maxent);
+const VelocityStore = alka.ecs.StoreComponent("Velocity", m.Vec2f, maxent);
 const ColourStore = alka.ecs.StoreComponent("Colour", alka.Colour, maxent);
-const World = alka.ecs.World(struct { r: RectangleStore, col: ColourStore });
+const World = alka.ecs.World(struct { r: RectangleStore, col: ColourStore, sp: SpeedStore, vl: VelocityStore });
 
 const maxent: u64 = 1024 * 100;
 var random: *std.rand.Random = undefined;
@@ -30,8 +32,13 @@ fn createEntity(i: u64) !void {
         },
     });
 
-    try reg.attach("Colour", alka.Colour.rgba(255, 255, 255, 255));
-    mlog.info("created {}", .{i});
+    const speed: f32 = 200 * @intToFloat(f32, random.intRangeAtMost(i32, -1, 1));
+    try reg.attach("Speed", speed);
+
+    try reg.attach("Velocity", m.Vec2f{});
+
+    try reg.attach("Colour", alka.Colour.rgba(random.intRangeAtMost(u8, 0, 200), random.intRangeAtMost(u8, 0, 200), random.intRangeAtMost(u8, 0, 200), 255));
+    //mlog.info("created {}", .{i});
 }
 
 fn update(dt: f32) !void {
@@ -45,21 +52,37 @@ fn update(dt: f32) !void {
         }
     }
 
-    const comps = [_][]const u8{"Rectangle"};
+    const comps = [_][]const u8{ "Velocity", "Speed", "Rectangle" };
+
+    var it = World.iterator(comps.len, comps){ .world = &world };
+    while (it.next()) |entry| {
+        if (entry.value) |entity| {
+            var vel = try entity.getPtr("Velocity", m.Vec2f);
+            var speed = try entity.getPtr("Speed", f32);
+            const rect = try entity.get("Rectangle", m.Rectangle);
+
+            if (rect.position.x > 1024 - rect.size.x) {
+                speed.* = -speed.*;
+            } else if (rect.position.x < 0) {
+                speed.* = m.abs(speed.*);
+            }
+
+            vel.x += speed.* * dt;
+        }
+    }
+}
+
+fn fupdate(dt: f32) !void {
+    const comps = [_][]const u8{ "Velocity", "Rectangle" };
 
     var it = World.iterator(comps.len, comps){ .world = &world };
     while (it.next()) |entry| {
         if (entry.value) |entity| {
             var rect = try entity.getPtr("Rectangle", m.Rectangle);
-            const speed: f32 = 200 * @intToFloat(f32, random.intRangeAtMost(i32, -1, 1));
+            var vel = try entity.getPtr("Velocity", m.Vec2f);
 
-            if (rect.position.x < 1024) {
-                rect.position.x += speed * dt;
-            } else rect.position.x -= speed * dt;
-
-            if (rect.position.y < 1024) {
-                rect.position.y -= speed * dt;
-            } else rect.position.y += speed * dt;
+            rect.position.x += vel.x;
+            vel.* = m.Vec2f{};
         }
     }
 }
@@ -87,9 +110,11 @@ fn draw() !void {
     defer alka.getAllocator().free(debug);
 
     try alka.drawText(0, debug, m.Vec2f{ .x = 20, .y = 20 }, 24, col);
+    mlog.info("{s}", .{debug});
 
     debug = try std.fmt.bufPrint(debug, "total: {}", .{index});
     try alka.drawText(0, debug, m.Vec2f{ .x = 20, .y = 45 }, 24, col);
+    mlog.info("{s}", .{debug});
 }
 
 fn close() void {
@@ -98,7 +123,7 @@ fn close() void {
         const reg = world.getRegister(i) catch continue;
         reg.destroy();
         world.removeRegister(i) catch continue;
-        mlog.info("destroyed {}", .{i});
+        //mlog.info("destroyed {}", .{i});
     }
 }
 
@@ -110,7 +135,7 @@ pub fn main() !void {
 
     const callbacks = alka.Callbacks{
         .update = update,
-        .fixed = null,
+        .fixed = fupdate,
         .draw = draw,
         .resize = null,
         .close = close,
