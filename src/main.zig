@@ -50,8 +50,8 @@ pub fn main() !void {
         defer world.popGroup();
         {
             //try world.addComponent("entity 1", "Position", m.Vec2f{ .x = 20 });
-            try world.addComponent("entity 2", "Position", m.Vec2f{ .x = 20 });
-            try world.addComponent("entity 4", "Position", m.Vec2f{ .x = 20 });
+            try world.addComponentName("entity 2", "Position", m.Vec2f{ .x = 20 });
+            try world.addComponentName("entity 4", "Position", m.Vec2f{ .x = 20 });
             // try world.removeComponent("entity 1", "Position");
 
         }

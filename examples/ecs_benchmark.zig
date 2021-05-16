@@ -35,8 +35,10 @@ fn draw() !void {
     while (it.next()) |entity| {
         if (it.index > 1024 * 5) break;
         if (entity.value) |id| {
-            const rect = try world.getComponentID(id, "Rectangle", m.Rectangle);
-            const col = try world.getComponentID(id, "Colour", alka.Colour);
+            try world.pushEntityID(id);
+
+            const rect = try world.getComponent("Rectangle", m.Rectangle);
+            const col = try world.getComponent("Colour", alka.Colour);
 
             try alka.drawRectangle(rect, col);
         }

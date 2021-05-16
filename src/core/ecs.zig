@@ -383,6 +383,7 @@ pub fn World(comptime Storage: type) type {
         alloc: *std.mem.Allocator = undefined,
         entity: Entity = undefined,
         group: ?*Group = null,
+        current_entity: ?u64 = null,
 
         /// Initializes the world
         pub fn init(alloc: *std.mem.Allocator) Error!Self {
@@ -421,8 +422,43 @@ pub fn World(comptime Storage: type) type {
             return Error.InvalidGroup;
         }
 
+        /// Pushes the entity
+        pub fn pushEntityName(self: *Self, entity_name: []const u8) Error!void {
+            const id = try self.entity.hasNameID(entity_name);
+            self.current_entity = id;
+        }
+
+        /// Pushes the entity
+        pub fn pushEntityID(self: *Self, entity_id: u64) Error!void {
+            if (!self.entity.hasID(entity_id)) return Error.InvalidEntityID;
+            self.current_entity = entity_id;
+        }
+
+        /// Pops the entity
+        pub fn popEntity(self: *Self) void {
+            self.current_entity = null;
+        }
+
         /// Adds a component to the entity
-        pub fn addComponent(self: *Self, entity_name: []const u8, component_name: []const u8, component: anytype) Error!void {
+        pub fn addComponent(self: *Self, component_name: []const u8, component: anytype) Error!void {
+            if (self.group) |group| {
+                if (self.current_entity) |id| {
+                    inline for (component_names) |name| {
+                        const typ = @TypeOf(@field(group.registers, name));
+                        if (std.mem.eql(u8, component_name, typ.Name)) {
+                            if (typ.T == @TypeOf(component))
+                                return @field(group.registers, name).add(id, component);
+                        }
+                    }
+                    return Error.InvalidComponent;
+                }
+                return Error.InvalidEntity;
+            }
+            return Error.InvalidGroup;
+        }
+
+        /// Adds a component to the entity
+        pub fn addComponentName(self: *Self, entity_name: []const u8, component_name: []const u8, component: anytype) Error!void {
             if (self.group) |group| {
                 const id = try self.entity.hasNameID(entity_name);
 
@@ -458,7 +494,26 @@ pub fn World(comptime Storage: type) type {
 
         /// Returns the desired component
         /// NOTE: READ ONLY
-        pub fn getComponent(self: *Self, entity_name: []const u8, component_name: []const u8, comptime component_type: type) Error!component_type {
+        pub fn getComponent(self: *Self, component_name: []const u8, comptime component_type: type) Error!component_type {
+            if (self.group) |group| {
+                if (self.current_entity) |id| {
+                    inline for (component_names) |name| {
+                        const typ = @TypeOf(@field(group.registers, name));
+                        if (std.mem.eql(u8, component_name, typ.Name)) {
+                            if (typ.T == component_type)
+                                return @field(group.registers, name).get(id);
+                        }
+                    }
+                    return Error.InvalidComponent;
+                }
+                return Error.InvalidEntity;
+            }
+            return Error.InvalidGroup;
+        }
+
+        /// Returns the desired component
+        /// NOTE: READ ONLY
+        pub fn getComponentName(self: *Self, entity_name: []const u8, component_name: []const u8, comptime component_type: type) Error!component_type {
             if (self.group) |group| {
                 const id = try self.entity.hasNameID(entity_name);
 
@@ -495,7 +550,26 @@ pub fn World(comptime Storage: type) type {
 
         /// Returns the desired component
         /// NOTE: MUTABLE 
-        pub fn getComponentPtr(self: *Self, entity_name: []const u8, component_name: []const u8, comptime component_type: type) Error!*component_type {
+        pub fn getComponentPtr(self: *Self, component_name: []const u8, comptime component_type: type) Error!*component_type {
+            if (self.group) |group| {
+                if (self.current_entity) |id| {
+                    inline for (component_names) |name| {
+                        const typ = @TypeOf(@field(group.registers, name));
+                        if (std.mem.eql(u8, component_name, typ.Name)) {
+                            if (typ.T == component_type)
+                                return @field(group.registers, name).getPtr(id);
+                        }
+                    }
+                    return Error.InvalidComponent;
+                }
+                return Error.InvalidEntity;
+            }
+            return Error.InvalidGroup;
+        }
+
+        /// Returns the desired component
+        /// NOTE: MUTABLE 
+        pub fn getComponentPtrName(self: *Self, entity_name: []const u8, component_name: []const u8, comptime component_type: type) Error!*component_type {
             if (self.group) |group| {
                 const id = try self.entity.hasNameID(entity_name);
 
@@ -531,7 +605,24 @@ pub fn World(comptime Storage: type) type {
         }
 
         /// Removes a component to the entity
-        pub fn removeComponent(self: *Self, entity_name: []const u8, component_name: []const u8) Error!void {
+        pub fn removeComponent(self: *Self, component_name: []const u8) Error!void {
+            if (self.group) |group| {
+                if (self.current_entity) |id| {
+                    inline for (component_names) |name| {
+                        const typ = @TypeOf(@field(group.registers, name));
+                        if (std.mem.eql(u8, component_name, typ.Name)) {
+                            return @field(group.registers, name).remove(id);
+                        }
+                    }
+                    return Error.InvalidComponent;
+                }
+                return Error.InvalidEntity;
+            }
+            return Error.InvalidGroup;
+        }
+
+        /// Removes a component to the entity
+        pub fn removeComponentName(self: *Self, entity_name: []const u8, component_name: []const u8) Error!void {
             if (self.group) |group| {
                 const id = try self.entity.hasNameID(entity_name);
 
