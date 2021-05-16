@@ -19,17 +19,39 @@ fn update(dt: f32) !void {
 
 fn draw() !void {
     const comps = [_][]const u8{"Position"};
-    //   const vlist = try world.viewFixed(1024 * 5, comps.len, comps);
 
-    //var i: usize = 0;
-    //while (i < vlist.len) : (i += 1) {
-    //    if (vlist[i]) |id| {
-    //        const rect = try world.getComponentID(id, "Rectangle", m.Rectangle);
-    //        const col = try world.getComponentID(id, "Colour", alka.Colour);
-    //
-    //            try alka.drawRectangle(rect, col);
-    //        }
-    //    }
+    // bad performance
+    if (1 == 0) {
+        const vlist = try world.view(comps.len, comps);
+        defer vlist.deinit();
+
+        var it = vlist.iterator();
+        while (it.next()) |entity| {
+            if (it.index > 1024 * 5) break;
+            try world.pushEntityID(entity.id);
+
+            const rect = try world.getComponent("Rectangle", m.Rectangle);
+            const col = try world.getComponent("Colour", alka.Colour);
+
+            try alka.drawRectangle(rect, col);
+        }
+    }
+
+    // same as iterator
+    if (1 == 0) {
+        const vlist = try world.viewFixed(1024 * 5, comps.len, comps);
+        var i: usize = 0;
+        while (i < vlist.len) : (i += 1) {
+            if (vlist[i]) |id| {
+                try world.pushEntityID(id);
+
+                const rect = try world.getComponent("Rectangle", m.Rectangle);
+                const col = try world.getComponent("Colour", alka.Colour);
+
+                try alka.drawRectangle(rect, col);
+            }
+        }
+    }
 
     var it = World.Group.iterator(comps.len, comps){ .group = group };
     while (it.next()) |entity| {
@@ -68,7 +90,7 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(&gpa.allocator, callbacks, 1024, 768, "title go brrr", 1000, false);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "ECS Benchmark", 1000, false);
 
     try alka.getAssetManager().loadFont(0, "assets/arial.ttf", 128);
     const font = try alka.getAssetManager().getFont(0);
@@ -87,7 +109,7 @@ pub fn main() !void {
             });
 
             try world.addComponentID(i, "Colour", alka.Colour.rgba(255, 255, 255, 255));
-            mlog.warn("{}", .{i});
+            mlog.info("created {}", .{i});
         }
     }
 
