@@ -69,7 +69,7 @@ pub fn StoreComponent(comptime name: []const u8, comptime Component: type) type 
 
         /// Has the component? 
         pub fn has(self: Self, id: u64) bool {
-            return self.components.isUnique(id);
+            return !self.components.isUnique(id);
         }
 
         /// Removes the component 
@@ -115,12 +115,10 @@ pub fn World(comptime Storage: type) type {
             /// Collects the entities
             /// Returns the entity id's
             pub fn view(self: *const Group, comptime len: usize, compnames: [len][]const u8) Error!UniqueList(u64) {
-                //comptime const vcomponent_names = comptime std.meta.fieldNames(components);
-
                 var alloc = self.alloc;
                 const world = self.world;
 
-                var list = try UniqueList(u64).init(alloc, 1);
+                var list = try UniqueList(u64).init(alloc, 0);
                 var iterator = world.entity.registers.iterator();
                 while (iterator.next()) |entry| {
                     if (entry.data != null) {
@@ -141,7 +139,7 @@ pub fn World(comptime Storage: type) type {
 
                         if (hasAll) {
                             //std.log.info("loading: {}", .{id});
-                            try list.append(list.findUnique(), id);
+                            try list.append(iterator.index, id);
                         }
                     }
                 }
@@ -326,7 +324,8 @@ pub fn World(comptime Storage: type) type {
                 inline for (component_names) |name| {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
-                        return group.add(id, typ, component);
+                        if (typ.T == @TypeOf(component))
+                            return group.add(id, typ, component);
                     }
                 }
                 return Error.InvalidComponent;
@@ -343,7 +342,8 @@ pub fn World(comptime Storage: type) type {
                 inline for (component_names) |name| {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
-                        return group.get(id, typ);
+                        if (typ.T == component_type)
+                            return group.get(id, typ);
                     }
                 }
                 return Error.InvalidComponent;
@@ -360,7 +360,8 @@ pub fn World(comptime Storage: type) type {
                 inline for (component_names) |name| {
                     const typ = @TypeOf(@field(group.registers, name));
                     if (std.mem.eql(u8, component_name, typ.Name)) {
-                        return group.getPtr(id, typ);
+                        if (typ.T == component_type)
+                            return group.getPtr(id, typ);
                     }
                 }
                 return Error.InvalidComponent;

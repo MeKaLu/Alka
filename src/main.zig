@@ -28,8 +28,9 @@ pub fn main() !void {
     //    try alka.init(&gpa.allocator, callbacks, 1024, 768, "title go brrr", 0, false);
 
     const PositionStore = alka.ecs.StoreComponent("Position", m.Vec2f);
-    const SizeStore = alka.ecs.StoreComponent("Size", m.Vec2f);
-    const World = alka.ecs.World(struct { pos: PositionStore, size: SizeStore });
+    const SizeStore = alka.ecs.StoreComponent("Size", m.Vec3f);
+    const TitleStore = alka.ecs.StoreComponent("Title", []const u8);
+    const World = alka.ecs.World(struct { pos: PositionStore, size: SizeStore, title: TitleStore });
 
     var world = try World.init(&gpa.allocator);
 
@@ -47,15 +48,13 @@ pub fn main() !void {
 
         {
             try world.addComponent("entity 1", "Position", m.Vec2f{ .x = 20 });
-            //try world.removeComponent("entity 1", "Position");
+            // try world.removeComponent("entity 1", "Position");
 
             var ptr = try world.getComponentPtr("entity 1", "Position", m.Vec2f);
             ptr.x = 15.25;
 
             const a = try world.getComponent("entity 1", "Position", m.Vec2f);
             mlog.warn("{d:.2}", .{a.x});
-
-            try world.addComponent("entity 2", "Size", m.Vec2f{ .y = 20 });
         }
 
         const comps = [_][]const u8{"Position"};

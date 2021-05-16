@@ -79,6 +79,7 @@ pub fn UniqueList(comptime generic_type: type) type {
             var i: usize = 0;
             while (i < self.items.len) : (i += 1) {
                 self.items[i].data = null;
+                self.items[i].id = 0;
             }
         }
 
@@ -102,16 +103,16 @@ pub fn UniqueList(comptime generic_type: type) type {
         pub fn isUnique(self: Self, id: u64) bool {
             var i: usize = 0;
             while (i < self.items.len) : (i += 1) {
-                if (self.items[i].data != null and self.items[i].id == id) return true;
+                if (self.items[i].data != null and self.items[i].id == id) return false;
             }
-            return false;
+            return true;
         }
 
         /// Returns an unique id 
         pub fn findUnique(self: Self) u64 {
             var i: u64 = 0;
             while (i < self.items.len) : (i += 1) {
-                if (!self.isUnique(i)) return i;
+                if (self.isUnique(i)) return i;
             }
             @panic("Probably integer overflow and how tf did you end up here anyways?");
         }
@@ -125,7 +126,7 @@ pub fn UniqueList(comptime generic_type: type) type {
         /// Inserts an item with given id and index
         /// Can(& will) overwrite into existing index if id is unique
         pub fn insertAt(self: *Self, id: u64, index: usize, data: T) Error!void {
-            if (self.isUnique(id)) return Error.IsNotUnique;
+            if (!self.isUnique(id)) return Error.IsNotUnique;
             self.items[index].data = data;
             self.items[index].id = id;
         }
