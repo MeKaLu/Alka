@@ -18,7 +18,7 @@ fn update(dt: f32) !void {
 }
 
 fn draw() !void {
-    const comps = [_][]const u8{"Position"};
+    const comps = [_][]const u8{ "Rectangle", "Colour" };
 
     // bad performance
     if (1 == 0) {
