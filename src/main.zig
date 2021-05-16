@@ -15,7 +15,10 @@ fn update(dt: f32) !void {
 fn draw() !void {}
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.GeneralPurposeAllocator(.{
+        .enable_memory_limit = false,
+    }){};
+    //gpa.setRequestedMemoryLimit(1048 * 1000 * 5);
 
     const callbacks = alka.Callbacks{
         .update = update,
@@ -45,7 +48,6 @@ pub fn main() !void {
 
         world.pushGroup(&group);
         defer world.popGroup();
-
         {
             try world.addComponent("entity 1", "Position", m.Vec2f{ .x = 20 });
             // try world.removeComponent("entity 1", "Position");
@@ -63,8 +65,8 @@ pub fn main() !void {
 
         var it = vlist.iterator();
         while (it.next()) |entity| {
-            if (entity.data) |id|
-                mlog.info("view id: {}", .{id});
+            //if (entity.data) |id|
+            //mlog.info("view id: {}", .{id});
         }
     }
     world.deinit();

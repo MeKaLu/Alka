@@ -250,7 +250,7 @@ pub fn getDebug() ![]u8 {
     if (!pengineready) return Error.EngineIsNotInitialized;
     var buffer: []u8 = try p.alloc.alloc(u8, 255);
 
-    buffer = try std.fmt.bufPrintZ(buffer, "update: {d}\tdraw: {d}\tdelta: {d}\tfps: {}", .{ p.frametime.update, p.frametime.draw, p.frametime.delta, p.fps.fps });
+    buffer = try std.fmt.bufPrintZ(buffer, "update: {d:.4}\tdraw: {d:.4}\tdelta: {d:.4}\tfps: {}", .{ p.frametime.update, p.frametime.draw, p.frametime.delta, p.fps.fps });
     return buffer;
 }
 

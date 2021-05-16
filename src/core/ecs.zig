@@ -134,8 +134,44 @@ pub fn World(comptime Storage: type) type {
                         }
 
                         if (hasAll) {
-                            //std.log.info("loading: {}", .{id});
+                            //std.log.info("loading: {}", .{iterator.index});
                             try list.append(iterator.index, id);
+                        }
+                    }
+                }
+                return list;
+            }
+
+            /// Collects the entities
+            /// Returns the entity id's
+            pub fn viewFixed(self: *const Group, comptime max_ent: usize, comptime len: usize, compnames: [len][]const u8) Error![max_ent]?u64 {
+                var alloc = self.alloc;
+                const world = self.world;
+
+                var list: [max_ent]?u64 = undefined;
+                var iterator = world.entity.registers.iterator();
+                while (iterator.next()) |entry| {
+                    if (iterator.index >= max_ent) break;
+
+                    if (entry.data != null) {
+                        const id = entry.id;
+                        var hasAll = true;
+
+                        for (compnames) |cname| {
+                            inline for (component_names) |name| {
+                                const typ = @TypeOf(@field(self.registers, name));
+                                if (std.mem.eql(u8, typ.Name, cname)) {
+                                    if (!try self.has(id, typ)) {
+                                        hasAll = false;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (hasAll) {
+                            //std.log.info("loading: {}", .{iterator.index});
+                            list[iterator.index] = id;
                         }
                     }
                 }
@@ -218,6 +254,7 @@ pub fn World(comptime Storage: type) type {
         };
 
         pub const Entity = struct {
+            alloc: *std.mem.Allocator = undefined,
             registers: UniqueList([]const u8) = undefined,
 
             /// Creates an entity with unique name and
@@ -228,6 +265,15 @@ pub fn World(comptime Storage: type) type {
                 const id = self.registers.findUnique();
                 try self.registers.append(id, name);
                 return id;
+            }
+
+            /// Creates an entity with unique id
+            pub fn createID(self: *Entity, id: u64) Error!void {
+                if (self.hasID(id)) return Error.InvalidEntityID;
+
+                var name = std.fmt.allocPrint(self.alloc, "alka_private{}", .{id}) catch @panic("Allocation failed!");
+                defer self.alloc.free(name);
+                try self.registers.append(id, name);
             }
 
             /// Destroys an entity with given name
@@ -289,6 +335,7 @@ pub fn World(comptime Storage: type) type {
             return Self{
                 .alloc = alloc,
                 .entity = Entity{
+                    .alloc = alloc,
                     .registers = try UniqueList([]const u8).init(alloc, 5),
                 },
             };
@@ -312,10 +359,36 @@ pub fn World(comptime Storage: type) type {
             return Error.InvalidGroup;
         }
 
+        /// Collects the entities
+        /// Returns the entity id's
+        pub fn viewFixed(self: *const Self, comptime max_ent: usize, comptime len: usize, compnames: [len][]const u8) Error![max_ent]?u64 {
+            if (self.group) |group|
+                return group.viewFixed(max_ent, len, compnames);
+            return Error.InvalidGroup;
+        }
+
         /// Adds a component to the entity
         pub fn addComponent(self: *Self, entity_name: []const u8, component_name: []const u8, component: anytype) Error!void {
             if (self.group) |group| {
                 const id = try self.entity.hasNameID(entity_name);
+
+                inline for (component_names) |name| {
+                    const typ = @TypeOf(@field(group.registers, name));
+                    if (std.mem.eql(u8, component_name, typ.Name)) {
+                        if (typ.T == @TypeOf(component))
+                            return group.add(id, typ, component);
+                    }
+                }
+                return Error.InvalidComponent;
+            }
+            return Error.InvalidGroup;
+        }
+
+        /// Adds a component to the entity
+        pub fn addComponentID(self: *Self, entity_id: u64, component_name: []const u8, component: anytype) Error!void {
+            if (self.group) |group| {
+                if (!self.entity.hasID(entity_id)) return Error.InvalidEntityID;
+                const id = entity_id;
 
                 inline for (component_names) |name| {
                     const typ = @TypeOf(@field(group.registers, name));
@@ -348,6 +421,25 @@ pub fn World(comptime Storage: type) type {
         }
 
         /// Returns the desired component
+        /// NOTE: READ ONLY
+        pub fn getComponentID(self: *Self, entity_id: u64, component_name: []const u8, comptime component_type: type) Error!component_type {
+            if (self.group) |group| {
+                if (!self.entity.hasID(entity_id)) return Error.InvalidEntityID;
+                const id = entity_id;
+
+                inline for (component_names) |name| {
+                    const typ = @TypeOf(@field(group.registers, name));
+                    if (std.mem.eql(u8, component_name, typ.Name)) {
+                        if (typ.T == component_type)
+                            return group.get(id, typ);
+                    }
+                }
+                return Error.InvalidComponent;
+            }
+            return Error.InvalidGroup;
+        }
+
+        /// Returns the desired component
         /// NOTE: MUTABLE 
         pub fn getComponentPtr(self: *Self, entity_name: []const u8, component_name: []const u8, comptime component_type: type) Error!*component_type {
             if (self.group) |group| {
@@ -365,10 +457,46 @@ pub fn World(comptime Storage: type) type {
             return Error.InvalidGroup;
         }
 
+        /// Returns the desired component
+        /// NOTE: MUTABLE 
+        pub fn getComponentPtrID(self: *Self, entity_id: u64, component_name: []const u8, comptime component_type: type) Error!*component_type {
+            if (self.group) |group| {
+                if (!self.entity.hasID(entity_id)) return Error.InvalidEntityID;
+                const id = entity_id;
+
+                inline for (component_names) |name| {
+                    const typ = @TypeOf(@field(group.registers, name));
+                    if (std.mem.eql(u8, component_name, typ.Name)) {
+                        if (typ.T == component_type)
+                            return group.getPtr(id, typ);
+                    }
+                }
+                return Error.InvalidComponent;
+            }
+            return Error.InvalidGroup;
+        }
+
         /// Removes a component to the entity
         pub fn removeComponent(self: *Self, entity_name: []const u8, component_name: []const u8) Error!void {
             if (self.group) |group| {
                 const id = try self.entity.hasNameID(entity_name);
+
+                inline for (component_names) |name| {
+                    const typ = @TypeOf(@field(group.registers, name));
+                    if (std.mem.eql(u8, component_name, typ.Name)) {
+                        return group.remove(id, typ);
+                    }
+                }
+                return Error.InvalidComponent;
+            }
+            return Error.InvalidGroup;
+        }
+
+        /// Removes a component to the entity
+        pub fn removeComponentID(self: *Self, entity_id: u64, component_name: []const u8) Error!void {
+            if (self.group) |group| {
+                if (!self.entity.hasID(entity_id)) return Error.InvalidEntityID;
+                const id = entity_id;
 
                 inline for (component_names) |name| {
                     const typ = @TypeOf(@field(group.registers, name));

@@ -107,7 +107,7 @@ pub fn UniqueList(comptime generic_type: type) type {
         /// Returns an unique id 
         pub fn findUnique(self: Self) u64 {
             var i: u64 = 0;
-            while (i < self.items.len) : (i += 1) {
+            while (i < self.items.len + 1) : (i += 1) {
                 if (self.isUnique(i)) return i;
             }
             @panic("Probably integer overflow and how tf did you end up here anyways?");
