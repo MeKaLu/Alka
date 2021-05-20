@@ -159,6 +159,7 @@ pub fn deinit() Error!void {
     try glfw.terminate();
 
     p.alloc.destroy(p);
+    pengineready = false;
     alog.info("fully deinitialized!", .{});
 }
 
