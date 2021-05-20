@@ -631,30 +631,6 @@ fn fupdate(dt: f32) !void {
             }
         }
     }
-
-    {
-        comptime const comps = [_][]const u8{
-            "Alive",
-            "Transform",
-            "Velocity",
-            "PlayerController",
-        };
-        var it = World.iterator(comps.len, comps){ .world = &world };
-
-        while (it.next()) |entry| {
-            if (abortfunc) break;
-            if (entry.value) |reg| {
-                if (try reg.get("Alive", bool)) {
-                    var tr = try reg.getPtr("Transform", Transform);
-                    var vel = try reg.getPtr("Velocity", m.Vec2f);
-
-                    try moveAndCollide(reg);
-                    tr.r.position = tr.r.position.add(vel.*);
-                    vel.* = m.Vec2f{};
-                }
-            }
-        }
-    }
 }
 
 fn draw() !void {
