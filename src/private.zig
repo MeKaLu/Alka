@@ -220,6 +220,10 @@ pub const AssetManager = struct {
         try self.loadFontPro(id, try renderer.Font.createFromTTF(self.alloc, path, null, pixelsize));
     }
 
+    pub fn loadFontFromMemory(self: *AssetManager, id: u64, mem: []const u8, pixelsize: i32) Error!void {
+        try self.loadFontPro(id, try renderer.Font.createFromTTFMemory(self.alloc, mem, null, pixelsize));
+    }
+
     pub fn loadFontPro(self: *AssetManager, id: u64, font: renderer.Font) Error!void {
         if (self.isFontExists(id)) {
             alog.err("font(id: {}) already exists!", .{id});

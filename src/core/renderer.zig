@@ -427,7 +427,7 @@ pub const Font = struct {
     glyph_padding: i32 = undefined,
 
     // source: https://github.com/raysan5/raylib/blob/cba412cc313e4f95eafb3fba9303400e65 c98984/src/text.c#L553
-    fn loadFontData(alloc: *std.mem.Allocator, mem: []u8, fontsize: i32, fontchars: ?[]const i32) Error![]Glyph {
+    fn loadFontData(alloc: *std.mem.Allocator, mem: []const u8, fontsize: i32, fontchars: ?[]const i32) Error![]Glyph {
         var info: c.stbtt_fontinfo = undefined;
         if (c.stbtt_InitFont(&info, @ptrCast([*c]const u8, mem), 0) == 0) {
             return Error.FailedToLoadFont;
@@ -690,13 +690,16 @@ pub const Font = struct {
     }
 
     pub fn createFromTTF(alloc: *std.mem.Allocator, filepath: []const u8, chars: ?[]const i32, pixelsize: i32) Error!Font {
+        var mem = try fs.readFile(alloc, filepath);
+        defer alloc.free(mem);
+        return createFromTTFMemory(alloc, mem, chars, pixelsize);
+    }
+
+    pub fn createFromTTFMemory(alloc: *std.mem.Allocator, mem: []const u8, chars: ?[]const i32, pixelsize: i32) Error!Font {
         var result = Font{};
         result.alloc = alloc;
         result.base_size = pixelsize;
         result.glyph_padding = 0;
-
-        var mem = try fs.readFile(alloc, filepath);
-        defer alloc.free(mem);
 
         result.glyphs = try loadFontData(alloc, mem, result.base_size, chars);
 
