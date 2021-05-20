@@ -25,6 +25,7 @@ const c = @import("c.zig");
 const gl = @import("gl.zig");
 const fs = @import("fs.zig");
 const m = @import("math/math.zig");
+const utf8 = @import("utf8.zig");
 usingnamespace @import("log.zig");
 
 const alog = std.log.scoped(.alka_core_renderer);
@@ -634,6 +635,58 @@ pub const Font = struct {
             if (self.glyphs[i].codepoint == codepoint) return @intCast(i32, i);
         }
         return index;
+    }
+
+    // source: https://github.com/raysan5/raylib/blob/cba412cc313e4f95eafb3fba9303400e65c98984/src/text.c#L1071
+    /// Measure string size for Font
+    pub fn measure(self: Font, string: []const u8, pixelsize: f32, spacing: f32) m.Vec2f {
+        const len = @intCast(i32, string.len);
+        var tlen: i32 = 0;
+        var lenc: i32 = 0;
+
+        var swi: f32 = 0;
+        var tswi: f32 = 0;
+
+        var shi: f32 = @intToFloat(f32, self.base_size);
+        var scale_factor: f32 = pixelsize / shi;
+
+        var letter: i32 = 0;
+        var index: usize = 0;
+
+        var i: usize = 0;
+        while (i < len) : (i += 1) {
+            lenc += 1;
+
+            var next: i32 = 0;
+
+            letter = utf8.nextCodepoint(string[i..], &next);
+            index = @intCast(usize, self.glyphIndex(letter));
+
+            // NOTE: normally we exit the decoding sequence as soon as a bad byte is found (and return 0x3f)
+            // but we need to draw all of the bad bytes using the '?' symbol so to not skip any we set next = 1
+            if (letter == 0x3f) next = 1;
+            i += @intCast(usize, next - 1);
+
+            if (letter == '\n') {
+                if (self.glyphs[index].advance != 0) {
+                    swi += @intToFloat(f32, self.glyphs[index].advance);
+                } else swi += self.rects[index].size.x + @intToFloat(f32, self.glyphs[index].offx);
+            } else {
+                if (tswi < swi) tswi = swi;
+                lenc = 0;
+                tswi = 0;
+                shi = @intToFloat(f32, self.base_size) * 1.5;
+            }
+
+            if (tlen < lenc) tlen = lenc;
+        }
+
+        if (tswi < swi) tswi = swi;
+
+        return m.Vec2f{
+            .x = tswi * scale_factor + @intToFloat(f32, tlen - 1) * spacing,
+            .y = shi * scale_factor,
+        };
     }
 
     pub fn createFromTTF(alloc: *std.mem.Allocator, filepath: []const u8, chars: ?[]const i32, pixelsize: i32) Error!Font {

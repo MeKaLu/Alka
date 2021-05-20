@@ -78,6 +78,18 @@ pub const Rectangle = struct {
             .y = self.height * 0.5,
         };
     }
+
+    /// AABB collision detection
+    /// between to rectangles
+    pub fn aabb(self: Rectangle, other: Rectangle) bool {
+        return aabb(self.position.x, self.position.y, self.size.x, self.size.y, other.position.x, other.position.y, other.size.x, other.size.y);
+    }
+
+    /// AABB collision detection
+    /// between to rectangles
+    pub fn aabbMeeting(self: Rectangle, other: Rectangle, meeting: Vec2f) bool {
+        return aabbMeeting(meeting.x, meeting.y, self.position.x, self.position.y, self.size.x, self.size.y, other.position.x, other.position.y, other.size.x, other.size.y);
+    }
 };
 
 /// 2D Camera

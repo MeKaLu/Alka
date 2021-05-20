@@ -480,6 +480,62 @@ pub fn drawLine(start: m.Vec2f, end: m.Vec2f, thickness: f32, colour: Colour) Er
     };
 }
 
+/// Draws a circle lines, 16 segments by default
+/// Draw mode: lineloop
+pub fn drawCircleLines(position: m.Vec2f, radius: f32, colour: Colour) Error!void {
+    return drawCircleLinesV(position, radius, 16, colour);
+}
+
+/// Draws a circle lines
+/// Draw mode: lineloop
+pub fn drawCircleLinesV(position: m.Vec2f, radius: f32, segment_count: u32, colour: Colour) Error!void {
+    const segments: f32 = @intToFloat(f32, segment_count);
+
+    var i: usize = 0;
+    if (p.force_batch) |id| {
+        i = id;
+    } else {
+        const batch = getBatch(gl.DrawMode.lineloop, pr.embed.default_shader.id, pr.embed.white_texture_id) catch |err| {
+            if (err == Error.InvalidBatch) {
+                _ = try createBatch(gl.DrawMode.lineloop, pr.embed.default_shader.id, pr.embed.white_texture_id);
+                return try drawCircleLinesV(position, radius, segment_count, colour);
+            } else return err;
+        };
+
+        i = @intCast(usize, batch.id);
+    }
+
+    var j: f32 = 0;
+    while (j < segments) : (j += 1) {
+        const theta = 2 * m.PI * j / segments;
+
+        const x = radius * @cos(theta) + position.x;
+        const y = radius * @sin(theta) + position.y;
+
+        const pos0 = m.Vec2f{ .x = x, .y = y };
+        const pos1 = m.Vec2f{ .x = x, .y = y };
+        const pos2 = m.Vec2f{ .x = x, .y = y };
+        const pos3 = m.Vec2f{ .x = x, .y = y };
+
+        const vx = [Batch2DQuad.max_vertex_count]Vertex2D{
+            .{ .position = pos0, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+            .{ .position = pos1, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+            .{ .position = pos2, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+            .{ .position = pos3, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+        };
+
+        p.batchs[i].data.submitDrawable(vx) catch |err| {
+            if (err == Error.ObjectOverflow) {
+                try pr.drawBatch(i);
+                try pr.cleanBatch(i);
+                //alog.notice("batch(id: {}) flushed!", .{i});
+
+                return p.batchs[i].data.submitDrawable(vx);
+            } else return err;
+        };
+    }
+}
+
 /// Draws a basic rectangle
 /// Draw mode: triangles
 pub fn drawRectangle(rect: m.Rectangle, colour: Colour) Error!void {

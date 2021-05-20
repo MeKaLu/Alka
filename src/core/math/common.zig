@@ -26,43 +26,60 @@ pub const PI = comptime 3.14159265358979323846;
 pub fn deg2radf(deg: f32) f32 {
     return deg * (PI / 180.0);
 }
+
 /// Convert radians to degree
 pub fn rad2degf(rad: f32) f32 {
     return rad * (180.0 / PI);
 }
+
 /// Find minimum value
 pub fn min(value1: anytype, value2: anytype) @TypeOf(value1) {
     return if (value1 < value2) value1 else value2;
 }
+
 /// Find maximum value
 pub fn max(value1: anytype, value2: anytype) @TypeOf(value1) {
     return if (value1 < value2) value2 else value1;
 }
+
 /// Clamp value
 pub fn clamp(value: anytype, low: anytype, high: anytype) @TypeOf(value) {
     assert(low <= high);
     return if (value < low) low else if (high < value) high else value;
 }
+
 /// Calculate linear interpolation between two value
 pub fn lerp(start: anytype, end: anytype, amount: anytype) @TypeOf(start) {
     return start + amount * (end - start);
 }
+
 /// Normalize input value within input range
 pub fn normalize(value: anytype, start: anytype, end: anytype) @TypeOf(value) {
     return (value - start) / (end - start);
 }
+
 /// Remap input value within input range to output range
 pub fn remap(value: anytype, inputStart: anytype, inputEnd: anytype, outputStart: anytype, outputEnd: anytype) @TypeOf(value) {
     return (value - inputStart) / (inputEnd - inputStart) * (outputEnd - outputStart) + outputStart;
 }
+
 /// Returns the absolute value
 pub fn abs(value: anytype) @TypeOf(value) {
     return if (value >= 0) value else -value;
 }
+
 /// AABB collision check
 pub fn aabb(x0: anytype, y0: anytype, w0: anytype, h0: anytype, x1: anytype, y1: anytype, w1: anytype, h1: anytype) bool {
     return if (x0 < x1 + w1 and
         x1 < x0 + w0 and
         y0 < y1 + h1 and
         y1 < y0 + h0) true else false;
+}
+
+/// AABB collision check
+pub fn aabbMeeting(meetx: anytype, meety: anytype, x0: anytype, y0: anytype, w0: anytype, h0: anytype, x1: anytype, y1: anytype, w1: anytype, h1: anytype) bool {
+    return if (x0 + meetx < x1 + w1 and
+        x1 < x0 + w0 + meetx and
+        y0 + meety < y1 + h1 and
+        y1 < y0 + h0 + meety) true else false;
 }
