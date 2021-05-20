@@ -142,16 +142,17 @@ pub fn UniqueList(comptime generic_type: type) type {
         }
 
         /// Removes the item with given id
-        pub fn remove(self: *Self, id: u64) Error!void {
+        pub fn remove(self: *Self, id: u64) bool {
             var i: usize = 0;
             while (i < self.items.len) : (i += 1) {
                 if (self.items[i].data != null and self.items[i].id == id) {
                     self.items[i].data = null;
-                    return;
+                    self.items[i].id = undefined;
+                    return true;
                 }
             }
 
-            return Error.InvalidID;
+            return false;
         }
 
         /// Returns the data with given id
@@ -279,16 +280,17 @@ pub fn UniqueFixedList(comptime generic_type: type, comptime generic_max: usize)
         }
 
         /// Removes the item with given id
-        pub fn remove(self: *Self, id: u64) Error!void {
+        pub fn remove(self: *Self, id: u64) bool {
             var i: usize = 0;
             while (i < self.items.len) : (i += 1) {
                 if (self.items[i].data != null and self.items[i].id == id) {
                     self.items[i].data = null;
-                    return;
+                    self.items[i].id = undefined;
+                    return true;
                 }
             }
 
-            return Error.InvalidID;
+            return false;
         }
 
         /// Returns the data with given id

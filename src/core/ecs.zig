@@ -24,7 +24,7 @@ const utils = @import("utils.zig");
 const UniqueList = utils.UniqueList;
 const UniqueFixedList = utils.UniqueFixedList;
 
-pub const Error = error{ InvalidComponent, FailedtoAllocate } || utils.Error;
+pub const Error = error{ InvalidComponent, FailedtoAllocate, InvalidRegister } || utils.Error;
 
 /// Stores the component struct in a convenient way
 pub fn StoreComponent(comptime name: []const u8, comptime Component: type, comptime MaxEntity: usize) type {
@@ -70,7 +70,7 @@ pub fn StoreComponent(comptime name: []const u8, comptime Component: type, compt
         }
 
         /// Removes the component 
-        pub fn remove(self: *Self, id: u64) Error!void {
+        pub fn remove(self: *Self, id: u64) bool {
             return self.components.remove(id);
         }
 
@@ -319,7 +319,11 @@ pub fn World(comptime Storage: type) type {
 
         /// Removes a register
         pub fn removeRegister(self: *_World, id: u64) Error!void {
-            return self.registers.remove(id);
+            inline for (TNames) |name| {
+                _ = @field(self.entries, name).remove(id);
+            }
+
+            if (!self.registers.remove(id)) return Error.InvalidRegister;
         }
 
         /// Deinitializes the world
