@@ -119,6 +119,8 @@ pub fn World(comptime Storage: type) type {
                 inline for (TNames) |tname| {
                     const typ = @TypeOf(@field(self.world.entries, tname));
                     if (std.mem.eql(u8, typ.Name, name)) {
+                        //std.log.debug("{s}", .{typ});
+                        //std.log.debug("comp: {s} {s}", .{ typ.T, @TypeOf(component) });
                         if (typ.T == @TypeOf(component)) {
                             var storage = &@field(self.world.entries, tname);
                             //std.log.debug("component: {}", .{component});

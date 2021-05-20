@@ -415,7 +415,7 @@ pub fn closeCallback(handle: ?*glfw.Window) void {
 }
 
 pub fn resizeCallback(handle: ?*glfw.Window, w: i32, h: i32) void {
-    gl.viewport(0, 0, w, h);
+    //gl.viewport(0, 0, w, h);
     //gl.ortho(0, @intToFloat(f32, p.win.size.width), @intToFloat(f32, p.win.size.height), 0, -1, 1);
     if (p.callbacks.resize) |fun| {
         fun(w, h);
