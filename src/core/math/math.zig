@@ -20,6 +20,7 @@
 //   distribution.
 
 pub usingnamespace @import("common.zig");
+const p = @import("common.zig");
 pub const vec2 = @import("vec2.zig");
 pub const vec3 = @import("vec3.zig");
 pub const mat4x4 = @import("mat4x4.zig");
@@ -82,13 +83,13 @@ pub const Rectangle = struct {
     /// AABB collision detection
     /// between to rectangles
     pub fn aabb(self: Rectangle, other: Rectangle) bool {
-        return aabb(self.position.x, self.position.y, self.size.x, self.size.y, other.position.x, other.position.y, other.size.x, other.size.y);
+        return p.aabb(self.position.x, self.position.y, self.size.x, self.size.y, other.position.x, other.position.y, other.size.x, other.size.y);
     }
 
     /// AABB collision detection
     /// between to rectangles
     pub fn aabbMeeting(self: Rectangle, other: Rectangle, meeting: Vec2f) bool {
-        return aabbMeeting(meeting.x, meeting.y, self.position.x, self.position.y, self.size.x, self.size.y, other.position.x, other.position.y, other.size.x, other.size.y);
+        return p.aabbMeeting(meeting.x, meeting.y, self.position.x, self.position.y, self.size.x, self.size.y, other.position.x, other.position.y, other.size.x, other.size.y);
     }
 };
 

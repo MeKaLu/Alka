@@ -300,6 +300,11 @@ pub fn World(comptime Storage: type) type {
             return self.registers.getPtr(reg.id);
         }
 
+        /// Finds a non-unique id
+        pub fn findID(self: _World) u64 {
+            return self.registers.findUnique();
+        }
+
         /// Returns a register
         /// NOTE: READ-ONLY 
         pub fn getRegister(self: _World, id: u64) Error!Register {
