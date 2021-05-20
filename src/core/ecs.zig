@@ -87,7 +87,7 @@ pub fn World(comptime Storage: type) type {
         const _World = @This();
         pub const T = Storage;
 
-        const Register = struct {
+        pub const Register = struct {
             pub const Entry = struct {
                 id: u64 = undefined,
                 name: []const u8 = undefined,
