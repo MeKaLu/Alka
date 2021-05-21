@@ -32,6 +32,10 @@ const alog = std.log.scoped(.alka_gui);
 pub const Error = error{ GUIisAlreadyInitialized, GUIisNotInitialized, InvalidCanvasID } || alka.Error;
 
 pub const Events = struct {
+    pub const State = enum { none, entered, onhover, exited };
+
+    state: State = State.none,
+
     update: ?fn (self: *Element, deltatime: f32) anyerror!void = null,
     fixed: ?fn (self: *Element, fixedtime: f32) anyerror!void = null,
     draw: ?fn (self: *Element) anyerror!void = null,
@@ -95,17 +99,6 @@ const Canvas = struct {
         return m.Transform2D{ .position = newpos, .size = newsize, .rotation = newrot };
     }
 
-    fn calculateElementColour(canvas: alka.Colour, col: alka.Colour) alka.Colour {
-        const newcol = alka.Colour{
-            .r = canvas.r * col.r,
-            .g = canvas.g * col.g,
-            .b = canvas.b * col.b,
-            .a = canvas.a * col.a,
-        };
-
-        return newcol;
-    }
-
     /// Initializes the canvas
     pub fn init(alloc: *std.mem.Allocator, id: u64, tr: m.Transform2D, colour: alka.Colour) Error!Canvas {
         return Canvas{
@@ -159,7 +152,7 @@ const Canvas = struct {
         var element = Element.init(
             id,
             calculateElementTransform(self.transform, transform),
-            calculateElementColour(self.colour, colour),
+            colour,
         );
         try self.elements.append(id, element);
 
@@ -203,6 +196,57 @@ const Canvas = struct {
                 if (!self.isInside(element.transform)) continue;
 
                 if (element.events.update) |fun| try fun(element, dt);
+
+                const aabb = element.transform.getRectangle().aabb(
+                    m.Rectangle{
+                        .position = alka.getMousePosition(),
+                        .size = m.Vec2f{ .x = 1, .y = 1 },
+                    },
+                );
+
+                if (aabb) {
+                    switch (element.events.state) {
+                        // on enter
+                        Events.State.none => {
+                            element.events.state = .entered;
+
+                            if (element.events.onEnter) |fun| try fun(element, alka.getMousePosition());
+                        },
+
+                        // on hover
+                        Events.State.entered => {
+                            //element.events.state = .onhover;
+
+                            if (element.events.onHover) |fun| try fun(element, alka.getMousePosition());
+                        },
+
+                        // on exit
+                        Events.State.onhover => {
+                            element.events.state = .exited;
+                        },
+
+                        Events.State.exited => {
+                            element.events.state = .none;
+                        },
+                    }
+                } else {
+                    switch (element.events.state) {
+                        // on enter
+                        Events.State.none => {},
+
+                        // on hover
+                        Events.State.entered => {
+                            element.events.state = .onhover;
+
+                            if (element.events.onExit) |fun| try fun(element, alka.getMousePosition());
+                        },
+
+                        // on exit
+                        Events.State.onhover => {},
+
+                        Events.State.exited => {},
+                    }
+                }
             }
         }
     }
@@ -239,15 +283,22 @@ const Canvas = struct {
                 if (element.events.draw) |fun| try fun(element);
             }
         }
-    }
 
-    /// Draw the canvas lines
-    pub fn drawLines(self: Canvas) Error!void {
-        return alka.drawRectangleLinesAdv(
-            self.transform.getRectangle(),
+        return alka.drawRectangleAdv(
+            self.transform.getRectangleNoOrigin(),
             self.transform.origin,
             m.deg2radf(self.transform.rotation),
             self.colour,
+        );
+    }
+
+    /// Draw the canvas lines
+    pub fn drawLines(self: Canvas, col: alka.Colour) Error!void {
+        return alka.drawRectangleLinesAdv(
+            self.transform.getRectangleNoOrigin(),
+            self.transform.origin,
+            m.deg2radf(self.transform.rotation),
+            col,
         );
     }
 };

@@ -109,8 +109,11 @@ pub const Transform2D = struct {
         };
     }
 
-    /// origin does not count  
     pub fn getRectangle(self: Transform2D) Rectangle {
+        return Rectangle{ .position = self.getOriginated(), .size = self.size };
+    }
+
+    pub fn getRectangleNoOrigin(self: Transform2D) Rectangle {
         return Rectangle{ .position = self.position, .size = self.size };
     }
 
