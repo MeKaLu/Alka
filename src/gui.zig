@@ -88,7 +88,7 @@ const Canvas = struct {
     elements: UniqueList(Element) = undefined,
 
     fn calculateElementTransform(canvas: m.Transform2D, tr: m.Transform2D) m.Transform2D {
-        const newpos = canvas.position.add(tr.position);
+        const newpos = m.Vec2f.sub(canvas.position.add(tr.position), canvas.origin);
         const newsize = tr.size;
         const newrot: f32 = canvas.rotation + tr.rotation;
 
@@ -138,7 +138,22 @@ const Canvas = struct {
         self.id = null;
     }
 
+    /// Is the given transform inside of the canvas?
+    pub fn isInside(self: Canvas, tr: m.Transform2D) bool {
+        const otr = self.transform;
+
+        const o0 = tr.getOriginated();
+        const o1 = otr.getOriginated();
+
+        const b0 = o0.x < o1.x + otr.size.x;
+        const b1 = o0.y < o1.y + otr.size.y;
+
+        return b0 and b1;
+    }
+
     /// Creates a element
+    /// NOTE: If element is not inside the canvas, it'll not
+    /// call these for that element: update, fixed, draw 
     /// can return `anyerror`
     pub fn createElement(self: *Canvas, id: u64, transform: m.Transform2D, colour: alka.Colour) !*Element {
         var element = Element.init(
@@ -185,6 +200,7 @@ const Canvas = struct {
                 // .next() increases the index by 1
                 // so we need '- 1' to get the current entry
                 var element = &self.elements.items[it.index - 1].data.?;
+                if (!self.isInside(element.transform)) continue;
 
                 if (element.events.update) |fun| try fun(element, dt);
             }
@@ -201,6 +217,7 @@ const Canvas = struct {
                 // .next() increases the index by 1
                 // so we need '- 1' to get the current entry
                 var element = &self.elements.items[it.index - 1].data.?;
+                if (!self.isInside(element.transform)) continue;
 
                 if (element.events.fixed) |fun| try fun(element, dt);
             }
@@ -217,10 +234,21 @@ const Canvas = struct {
                 // .next() increases the index by 1
                 // so we need '- 1' to get the current entry
                 var element = &self.elements.items[it.index - 1].data.?;
+                if (!self.isInside(element.transform)) continue;
 
                 if (element.events.draw) |fun| try fun(element);
             }
         }
+    }
+
+    /// Draw the canvas lines
+    pub fn drawLines(self: Canvas) Error!void {
+        return alka.drawRectangleLinesAdv(
+            self.transform.getRectangle(),
+            self.transform.origin,
+            m.deg2radf(self.transform.rotation),
+            self.colour,
+        );
     }
 };
 
