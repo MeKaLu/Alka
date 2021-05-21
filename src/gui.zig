@@ -191,7 +191,7 @@ const Canvas = struct {
             colour,
         );
         element.events = events;
-        element.setTransform(element.transform);
+        element.setTransform(transform);
         try self.elements.append(id, element);
 
         var ptr = try self.elements.getPtr(id);
@@ -245,6 +245,7 @@ const Canvas = struct {
                 // .next() increases the index by 1
                 // so we need '- 1' to get the current entry
                 var element = &self.elements.items[it.index - 1].data.?;
+                element.transform = calculateElementTransform(self.transform, element.original_transform);
                 if (!self.isInside(element.transform)) continue;
 
                 if (element.events.update) |fun| try fun(element, dt);
@@ -333,6 +334,7 @@ const Canvas = struct {
                 // .next() increases the index by 1
                 // so we need '- 1' to get the current entry
                 var element = &self.elements.items[it.index - 1].data.?;
+                element.transform = calculateElementTransform(self.transform, element.original_transform);
                 if (!self.isInside(element.transform)) continue;
 
                 if (element.events.fixed) |fun| try fun(element, dt);

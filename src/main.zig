@@ -9,11 +9,25 @@ usingnamespace alka.log;
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;
 
+var vel: f32 = 0;
+var dir: f32 = 1;
+
 fn update(dt: f32) !void {
+    const canvas = try gui.getCanvas(0);
+    const pos = canvas.transform.getOriginated();
+    if (pos.x > 1024 - canvas.transform.size.x) {
+        dir = -1;
+    } else if (pos.x < 0) {
+        dir = 1;
+    }
+    vel += 100 * dt * dir;
     try gui.update(dt);
 }
 
 fn fupdate(dt: f32) !void {
+    var canvas = try gui.getCanvasPtr(0);
+    canvas.transform.position.x += vel;
+    vel = 0;
     try gui.fixed(dt);
 }
 
