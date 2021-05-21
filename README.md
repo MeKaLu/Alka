@@ -20,7 +20,7 @@ Get started [now](https://github.com/Kiakra/Alka/blob/master/get-started.md)
 - [x] Simple ecs
 - [ ] Simple 2D lightning
 - [ ] Simple 2D physics
-- [ ] GUI system
+- [x] GUI system
 - [ ] Audio
 - [ ] Optional: Data packer 
 - [ ] Optional: Scripting language 

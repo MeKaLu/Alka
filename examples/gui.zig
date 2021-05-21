@@ -1,5 +1,5 @@
 const std = @import("std");
-const alka = @import("alka.zig");
+const alka = @import("alka");
 
 const gui = alka.gui;
 const m = alka.math;
@@ -88,7 +88,7 @@ pub fn main() !void {
         .close = null,
     };
 
-    try alka.init(&gpa.allocator, callbacks, 1024, 768, "main", 0, false);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "GUI", 0, false);
 
     var inp = alka.getInput();
     try inp.bindMouse(.ButtonLeft);

@@ -20,8 +20,7 @@
 //   distribution.
 
 const atan2 = @import("std").math.atan2;
-
-usingnamespace @import("common.zig");
+const c = @import("common.zig");
 
 /// Generic Vector2 Type
 pub fn Generic(comptime T: type) type {
@@ -95,6 +94,14 @@ pub fn Generic(comptime T: type) type {
                     const dx = v1.x - v2.x;
                     const dy = v1.y - v2.y;
                     return @sqrt(dx * dx + dy * dy);
+                }
+
+                /// Make it absolute
+                pub fn abs(self: Self) Self {
+                    return Self{
+                        .x = c.abs(self.x),
+                        .y = c.abs(self.y),
+                    };
                 }
 
                 /// Converts the vec2 into the array

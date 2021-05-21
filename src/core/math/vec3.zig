@@ -20,6 +20,7 @@
 //   distribution.
 
 const mat4x4 = @import("mat4x4.zig");
+const c = @import("common.zig");
 
 /// Generic Vector3 Type
 pub fn Generic(comptime T: type) type {
@@ -84,6 +85,15 @@ pub fn Generic(comptime T: type) type {
                         .x = mat.m0 * x + mat.m4 * y + mat.m8 * z + mat.m12,
                         .y = mat.m1 * x + mat.m5 * y + mat.m9 * z + mat.m13,
                         .z = mat.m2 * x + mat.m6 * y + mat.m10 * z + mat.m14,
+                    };
+                }
+
+                /// Make it absolute
+                pub fn abs(self: Self) Self {
+                    return Self{
+                        .x = c.abs(self.x),
+                        .y = c.abs(self.y),
+                        .z = c.abs(self.z),
                     };
                 }
 

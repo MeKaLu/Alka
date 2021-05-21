@@ -43,26 +43,28 @@ pub const Events = struct {
     onCreate: ?fn (self: *Element) anyerror!void = null,
     onDestroy: ?fn (self: *Element) anyerror!void = null,
 
-    onEnter: ?fn (self: *Element, position: m.Vec2f) anyerror!void = null,
+    onEnter: ?fn (self: *Element, position: m.Vec2f, relativepos: m.Vec2f) anyerror!void = null,
 
-    onHover: ?fn (self: *Element, position: m.Vec2f) anyerror!void = null,
+    onHover: ?fn (self: *Element, position: m.Vec2f, relativepos: m.Vec2f) anyerror!void = null,
 
     /// State does not matter
-    onClick: ?fn (self: *Element, position: m.Vec2f, button: alka.input.Mouse) anyerror!void = null,
+    onClick: ?fn (self: *Element, position: m.Vec2f, relativepos: m.Vec2f, button: alka.input.Mouse) anyerror!void = null,
 
-    onPressed: ?fn (self: *Element, position: m.Vec2f, button: alka.input.Mouse) anyerror!void = null,
-    onDown: ?fn (self: *Element, position: m.Vec2f, button: alka.input.Mouse) anyerror!void = null,
-    onReleased: ?fn (self: *Element, position: m.Vec2f, button: alka.input.Mouse) anyerror!void = null,
+    onPressed: ?fn (self: *Element, position: m.Vec2f, relativepos: m.Vec2f, button: alka.input.Mouse) anyerror!void = null,
+    onDown: ?fn (self: *Element, position: m.Vec2f, relativepos: m.Vec2f, button: alka.input.Mouse) anyerror!void = null,
+    onReleased: ?fn (self: *Element, position: m.Vec2f, relativepos: m.Vec2f, button: alka.input.Mouse) anyerror!void = null,
 
-    onExit: ?fn (self: *Element, position: m.Vec2f) anyerror!void = null,
+    onExit: ?fn (self: *Element, position: m.Vec2f, relativepos: m.Vec2f) anyerror!void = null,
 };
 
 pub const Element = struct {
     id: ?u64 = null,
 
     transform: m.Transform2D = undefined,
+    original_transform: m.Transform2D = undefined,
+
     colour: alka.Colour = undefined,
-    events: Events = undefined,
+    events: Events = Events{},
 
     /// Initializes the element
     /// DO NOT USE MANUALLY
@@ -71,15 +73,29 @@ pub const Element = struct {
             .id = id,
             .transform = tr,
             .colour = colour,
-            .events = Events{},
         };
     }
 
     /// Deinitializes the element
     /// DO NOT USE MANUALLY
     pub fn deinit(self: *Element) void {
-        self.events = undefined;
         self.id = null;
+    }
+
+    /// Sets the original transform 
+    pub fn setTransform(self: *Element, tr: m.Transform2D) void {
+        self.original_transform = tr;
+    }
+
+    /// Scales
+    /// Multiplies with the original transform
+    /// which is set by `setTransform`
+    pub fn scale(self: *Element, ratio: f32) void {
+        self.transform.size.x = self.original_transform.size.x * ratio;
+        self.transform.size.y = self.original_transform.size.y * ratio;
+
+        self.transform.origin.x = self.original_transform.origin.x * ratio;
+        self.transform.origin.y = self.original_transform.origin.y * ratio;
     }
 };
 
@@ -88,11 +104,31 @@ const Canvas = struct {
     id: ?u64 = null,
 
     transform: m.Transform2D = undefined,
+    original_transform: m.Transform2D = undefined,
+
     colour: alka.Colour = undefined,
     elements: UniqueList(Element) = undefined,
 
+    /// Iterator
+    pub const Iterator = struct {
+        parent: *Canvas = undefined,
+        index: usize = undefined,
+
+        pub fn next(it: *Iterator) ?*Element {
+            if (it.index >= it.parent.elements.items.len) return null;
+            var result = &it.parent.elements.items[it.index];
+            it.index += 1;
+            return if (result.data != null and result.data.?.id != null) &result.data.? else null;
+        }
+
+        /// Reset the iterator
+        pub fn reset(it: *Iterator) void {
+            it.index = 0;
+        }
+    };
+
     fn calculateElementTransform(canvas: m.Transform2D, tr: m.Transform2D) m.Transform2D {
-        const newpos = m.Vec2f.sub(canvas.position.add(tr.position), canvas.origin);
+        const newpos = m.Vec2f.sub(canvas.position.add(tr.position.sub(tr.origin)), canvas.origin);
         const newsize = tr.size;
         const newrot: f32 = canvas.rotation + tr.rotation;
 
@@ -106,7 +142,7 @@ const Canvas = struct {
             .id = id,
             .transform = tr,
             .colour = colour,
-            .elements = try UniqueList(Element).init(alloc, 0),
+            .elements = try UniqueList(Element).init(alloc, 1),
         };
     }
 
@@ -148,12 +184,14 @@ const Canvas = struct {
     /// NOTE: If element is not inside the canvas, it'll not
     /// call these for that element: update, fixed, draw 
     /// can return `anyerror`
-    pub fn createElement(self: *Canvas, id: u64, transform: m.Transform2D, colour: alka.Colour) !*Element {
+    pub fn createElement(self: *Canvas, id: u64, transform: m.Transform2D, colour: alka.Colour, events: Events) !*Element {
         var element = Element.init(
             id,
             calculateElementTransform(self.transform, transform),
             colour,
         );
+        element.events = events;
+        element.setTransform(element.transform);
         try self.elements.append(id, element);
 
         var ptr = try self.elements.getPtr(id);
@@ -177,7 +215,7 @@ const Canvas = struct {
     pub fn destroyElement(self: *Canvas, id: u64) !void {
         var element = try self.elements.getPtr(id);
 
-        if (element.events.onDestroy) |fun| try fun(ptr);
+        if (element.events.onDestroy) |fun| try fun(element);
         element.deinit();
 
         if (!self.elements.remove(id)) return Error.InvalidCanvasID;
@@ -186,8 +224,22 @@ const Canvas = struct {
     /// Update the canvas
     /// can return `anyerror`
     pub fn update(self: Canvas, dt: f32) !void {
-        var it = self.elements.iterator();
+        var mlist: [alka.input.Info.max_mouse_count]alka.input.Info.BindingManager = undefined;
+        var mlist_index: u8 = 0;
+        {
+            var i: u8 = 0;
+            while (i < alka.input.Info.max_mouse_count) : (i += 1) {
+                var l = alka.getInput().mouse_list[i];
+                if (l.mouse != .Invalid) {
+                    mlist[mlist_index] = l;
+                    mlist_index += 1;
+                }
+            }
+        }
+        const cam = alka.getCamera2D();
+        const mpos = alka.getMousePosition();
 
+        var it = self.elements.iterator();
         while (it.next()) |entry| {
             if (entry.data != null) {
                 // .next() increases the index by 1
@@ -197,55 +249,75 @@ const Canvas = struct {
 
                 if (element.events.update) |fun| try fun(element, dt);
 
-                const aabb = element.transform.getRectangle().aabb(
-                    m.Rectangle{
-                        .position = alka.getMousePosition(),
-                        .size = m.Vec2f{ .x = 1, .y = 1 },
-                    },
-                );
+                const pos = cam.worldToScreen(element.transform.getOriginated());
+                const mrpos = blk: {
+                    var mp = m.Vec2f.sub(mpos, pos);
+                    if (mp.x < 0) mp.x = 0;
+                    if (mp.y < 0) mp.y = 0;
+                    break :blk mp;
+                };
 
-                if (aabb) {
-                    switch (element.events.state) {
-                        // on enter
-                        Events.State.none => {
+                const aabb = blk: {
+                    const rect = m.Rectangle{
+                        .position = pos,
+                        .size = element.transform.size,
+                    };
+                    const res = rect.aabb(
+                        m.Rectangle{
+                            .position = mpos,
+                            .size = m.Vec2f{ .x = 1, .y = 1 },
+                        },
+                    );
+                    break :blk res;
+                };
+
+                switch (element.events.state) {
+                    Events.State.none => {
+                        if (aabb) {
                             element.events.state = .entered;
+                        }
+                    },
 
-                            if (element.events.onEnter) |fun| try fun(element, alka.getMousePosition());
-                        },
+                    Events.State.entered => {
+                        if (element.events.onEnter) |fun| try fun(element, mpos, mrpos);
+                        element.events.state = .onhover;
+                    },
 
-                        // on hover
-                        Events.State.entered => {
-                            //element.events.state = .onhover;
-
-                            if (element.events.onHover) |fun| try fun(element, alka.getMousePosition());
-                        },
-
-                        // on exit
-                        Events.State.onhover => {
+                    Events.State.onhover => {
+                        if (!aabb) {
                             element.events.state = .exited;
-                        },
+                        } else {
+                            if (element.events.onHover) |fun|
+                                try fun(element, mpos, mrpos);
 
-                        Events.State.exited => {
-                            element.events.state = .none;
-                        },
-                    }
-                } else {
-                    switch (element.events.state) {
-                        // on enter
-                        Events.State.none => {},
+                            var i: u8 = 0;
+                            while (i < mlist_index) : (i += 1) {
+                                var l = alka.getInput().mouse_list[i];
+                                if (l.mouse != .Invalid) {
+                                    switch (l.status) {
+                                        .none => {},
+                                        .pressed => {
+                                            if (element.events.onClick) |mfun| try mfun(element, mpos, mrpos, l.mouse);
+                                            if (element.events.onPressed) |mfun| try mfun(element, mpos, mrpos, l.mouse);
+                                        },
+                                        .down => {
+                                            if (element.events.onClick) |mfun| try mfun(element, mpos, mrpos, l.mouse);
+                                            if (element.events.onDown) |mfun| try mfun(element, mpos, mrpos, l.mouse);
+                                        },
+                                        .released => {
+                                            if (element.events.onClick) |mfun| try mfun(element, mpos, mrpos, l.mouse);
+                                            if (element.events.onReleased) |mfun| try mfun(element, mpos, mrpos, l.mouse);
+                                        },
+                                    }
+                                }
+                            }
+                        }
+                    },
 
-                        // on hover
-                        Events.State.entered => {
-                            element.events.state = .onhover;
-
-                            if (element.events.onExit) |fun| try fun(element, alka.getMousePosition());
-                        },
-
-                        // on exit
-                        Events.State.onhover => {},
-
-                        Events.State.exited => {},
-                    }
+                    Events.State.exited => {
+                        if (element.events.onExit) |fun| try fun(element, mpos, mrpos);
+                        element.events.state = .none;
+                    },
                 }
             }
         }
@@ -301,6 +373,35 @@ const Canvas = struct {
             col,
         );
     }
+
+    /// Sets the original transform 
+    pub fn setTransform(self: *Canvas, tr: m.Transform2D) void {
+        self.original_transform = tr;
+    }
+
+    /// Scales
+    /// Multiplies with the original transform
+    /// which is set by `setTransform`
+    pub fn scale(self: *Canvas, ratio: f32) void {
+        self.transform.size.x = self.original_transform.size.x * ratio;
+        self.transform.size.y = self.original_transform.size.y * ratio;
+
+        self.transform.origin.x = self.original_transform.origin.x * ratio;
+        self.transform.origin.y = self.original_transform.origin.y * ratio;
+
+        var it = self.iterator();
+        while (it.next()) |element| {
+            element.scale(ratio);
+        }
+    }
+
+    /// Returns the iterator
+    pub fn iterator(self: *Canvas) Iterator {
+        return Iterator{
+            .parent = self,
+            .index = 0,
+        };
+    }
 };
 
 const Private = struct {
@@ -355,6 +456,7 @@ pub fn createCanvas(id: u64, tr: m.Transform2D, col: alka.Colour) Error!*Canvas 
     if (!p.is_initialized) return Error.GUIisNotInitialized;
 
     var canvas = try Canvas.init(p.alloc, id, tr, col);
+    canvas.setTransform(tr);
     try p.canvas.append(id, canvas);
     return p.canvas.getPtr(id);
 }
@@ -393,8 +495,8 @@ pub fn update(dt: f32) !void {
         if (entry.data != null) {
             // .next() increases the index by 1
             // so we need '- 1' to get the current entry
-            var element = &p.canvas.items[it.index - 1].data.?;
-            if (element.id != null) try element.update(dt);
+            var canvas = &p.canvas.items[it.index - 1].data.?;
+            if (canvas.id != null) try canvas.update(dt);
         }
     }
 }
@@ -408,8 +510,8 @@ pub fn fixed(dt: f32) !void {
         if (entry.data != null) {
             // .next() increases the index by 1
             // so we need '- 1' to get the current entry
-            var element = &p.canvas.items[it.index - 1].data.?;
-            if (element.id != null) try element.fixed(dt);
+            var canvas = &p.canvas.items[it.index - 1].data.?;
+            if (canvas.id != null) try canvas.fixed(dt);
         }
     }
 }
@@ -423,8 +525,8 @@ pub fn draw() !void {
         if (entry.data != null) {
             // .next() increases the index by 1
             // so we need '- 1' to get the current entry
-            var element = &p.canvas.items[it.index - 1].data.?;
-            if (element.id != null) try element.draw();
+            var canvas = &p.canvas.items[it.index - 1].data.?;
+            if (canvas.id != null) try canvas.draw();
         }
     }
 }

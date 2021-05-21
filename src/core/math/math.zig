@@ -128,7 +128,7 @@ pub const Transform2D = struct {
             .position = other.getOriginated(),
             .size = other.size,
         };
-        return Rectangle.aabb(r1, r2);
+        return Rectangle.aabb(r0, r1);
     }
 
     /// AABB collision detection
@@ -149,7 +149,7 @@ pub const Transform2D = struct {
             .position = other.getOriginated(),
             .size = other.size,
         };
-        return Rectangle.aabbMeeting(r1, r2, meeting);
+        return Rectangle.aabbMeeting(r0, r1, meeting);
     }
 
     /// AABB collision detection
