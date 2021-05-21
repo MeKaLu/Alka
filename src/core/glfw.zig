@@ -632,8 +632,8 @@ pub fn setWindowTitle(window: ?*Window, title: [*:0]const u8) !void {
     try errorCheck();
 }
 
-extern fn glfwSetWindowIcon(window: ?*Window, count: c_int, images: ?[*]const GLFWimage) void;
-pub fn setWindowIcon(window: ?*Window, count: c_int, images: ?[*]const GLFWimage) !void {
+extern fn glfwSetWindowIcon(window: ?*Window, count: c_int, images: ?[*]const Image) void;
+pub fn setWindowIcon(window: ?*Window, count: c_int, images: ?[*]const Image) !void {
     glfwSetWindowIcon(window, count, images);
     try errorCheck();
 }

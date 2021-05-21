@@ -24,6 +24,11 @@ const std = @import("std");
 const glfw = @import("glfw.zig");
 const time = @import("std").time;
 
+const fs = @import("fs.zig");
+const c = @import("c.zig");
+
+pub const Error = error{FailedToLoadIcon} || glfw.GLFWError || fs.Error;
+
 usingnamespace @import("log.zig");
 const alogw = std.log.scoped(.alka_core_window);
 
@@ -35,14 +40,14 @@ pub const FrameTime = struct {
     current: f64 = 0,
 
     /// Start updating frametime
-    pub fn start(fr: *FrameTime) glfw.GLFWError!void {
+    pub fn start(fr: *FrameTime) Error!void {
         fr.current = try glfw.getTime();
         fr.update = fr.current - fr.last;
         fr.last = fr.current;
     }
 
     /// Stop updating frametime
-    pub fn stop(fr: *FrameTime) glfw.GLFWError!void {
+    pub fn stop(fr: *FrameTime) Error!void {
         fr.current = try glfw.getTime();
         fr.draw = fr.current - fr.last;
         fr.last = fr.current;
@@ -51,7 +56,7 @@ pub const FrameTime = struct {
     }
 
     /// Sleep for the sake of cpu
-    pub fn sleep(fr: *FrameTime, targetfps: f64) glfw.GLFWError!void {
+    pub fn sleep(fr: *FrameTime, targetfps: f64) Error!void {
         if (fr.delta < targetfps) {
             const ms = (targetfps - fr.delta) * 1000;
             const sleep_time = ms * 1000000;
@@ -115,7 +120,7 @@ pub const Info = struct {
     };
 
     /// Create the window
-    pub fn create(win: *Info, fullscreen: bool, centered: bool) glfw.GLFWError!void {
+    pub fn create(win: *Info, fullscreen: bool, centered: bool) Error!void {
         if (win.handle != null)
             alogw.crit("handle must be null while creating the window! Continuing execution.", .{});
 
@@ -134,7 +139,7 @@ pub const Info = struct {
     }
 
     /// Create the window
-    pub fn createPro(win: *Info, monitor: ?*glfw.Monitor) glfw.GLFWError!void {
+    pub fn createPro(win: *Info, monitor: ?*glfw.Monitor) Error!void {
         if (win.handle != null)
             alogw.crit("handle must be null while creating the window! Continuing execution.", .{});
 
@@ -145,7 +150,7 @@ pub const Info = struct {
     }
 
     /// Sets the window callbacks
-    pub fn setCallbacks(win: *Info) glfw.GLFWError!void {
+    pub fn setCallbacks(win: *Info) Error!void {
         if (win.callbacks.close != null) {
             _ = try glfw.setWindowCloseCallback(win.handle, @ptrCast(glfw.WindowCloseFun, win.callbacks.close));
         }
@@ -166,8 +171,28 @@ pub const Info = struct {
         }
     }
 
+    /// Sets the window icon
+    pub fn setIcon(win: *Info, alloc: *std.mem.Allocator, path: []const u8) Error!void {
+        if (win.handle == null)
+            alogw.crit("handle has to be valid when setting the icon of the window! Continuing execution.", .{});
+
+        const mem = try fs.readFile(alloc, path);
+        defer alloc.free(mem);
+
+        var img: glfw.Image = undefined;
+        img.pixels = c.stbi_load_from_memory(@ptrCast([*c]const u8, mem), @intCast(i32, mem.len), &img.width, &img.height, null, 4);
+        defer c.stbi_image_free(img.pixels);
+
+        if (img.pixels == null) {
+            return Error.FailedToLoadIcon;
+        }
+
+        const images = [1]glfw.Image{img};
+        try glfw.setWindowIcon(win.handle, images.len, &images);
+    }
+
     /// Destroys the window
-    pub fn destroy(win: *Info) glfw.GLFWError!void {
+    pub fn destroy(win: *Info) Error!void {
         if (win.handle == null)
             alogw.crit("handle has to be valid when destroying the window! Continuing execution.", .{});
         try glfw.destroyWindow(win.handle);
@@ -175,7 +200,7 @@ pub const Info = struct {
     }
 
     /// Updates the properties
-    pub fn update(win: *Info, p: UpdateProperty) glfw.GLFWError!void {
+    pub fn update(win: *Info, p: UpdateProperty) Error!void {
         switch (p) {
             UpdateProperty.size => {
                 try glfw.setWindowSize(win.handle, win.size.width, win.size.height);

@@ -29,6 +29,9 @@ pub fn main() !void {
 
     try alka.init(&gpa.allocator, callbacks, 1024, 768, "main", 0, false);
 
+    var w = alka.getWindow();
+    try w.setIcon(alka.getAllocator(), "assets/test.png");
+
     try alka.open();
     try alka.update();
     try alka.close();
