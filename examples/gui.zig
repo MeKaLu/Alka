@@ -48,7 +48,7 @@ fn fixedButton(self: *gui.Element, dt: f32) !void {
 
 fn drawButton(self: *gui.Element) !void {
     try alka.drawRectangleAdv(
-        self.transform.getRectangle(),
+        self.transform.getRectangleNoOrigin(),
         self.transform.origin,
         m.deg2radf(self.transform.rotation),
         self.colour,
