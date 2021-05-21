@@ -24,7 +24,12 @@ pub const PI = comptime 3.14159265358979323846;
 
 /// Convert degree to radians
 pub fn deg2radf(deg: f32) f32 {
-    return deg * (PI / 180.0);
+    var ndeg = deg;
+    if (ndeg > 360) {
+        ndeg -= 360;
+        if (ndeg > 360) return deg2radf(ndeg);
+    }
+    return ndeg * (PI / 180.0);
 }
 
 /// Convert radians to degree

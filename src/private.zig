@@ -43,8 +43,8 @@ pub const embed = struct {
     pub const white_texture_id = 0;
 };
 
-const perror = error{ InvalidBatch, InvalidMVP, EngineIsInitialized, EngineIsNotInitialized, FailedToFind };
-const asseterror = error{ AlreadyExists, FailedToResize, InvalidID };
+const perror = error{ InvalidBatch, InvalidMVP, EngineIsInitialized, EngineIsNotInitialized, FailedToFindPrivateBatch };
+const asseterror = error{ AssetAlreadyExists, FailedToAllocate, InvalidAssetID };
 /// Error set
 pub const Error = perror || asseterror || core.Error;
 
@@ -128,7 +128,7 @@ pub const AssetManager = struct {
         while (i < self.shaders.items.len) : (i += 1) {
             if (self.shaders.items[i].id == id) return i;
         }
-        return Error.InvalidID;
+        return Error.InvalidAssetID;
     }
 
     fn findTexture(self: AssetManager, id: u64) Error!u64 {
@@ -136,7 +136,7 @@ pub const AssetManager = struct {
         while (i < self.textures.items.len) : (i += 1) {
             if (self.textures.items[i].id == id) return i;
         }
-        return Error.InvalidID;
+        return Error.InvalidAssetID;
     }
 
     fn findFont(self: AssetManager, id: u64) Error!u64 {
@@ -144,7 +144,7 @@ pub const AssetManager = struct {
         while (i < self.fonts.items.len) : (i += 1) {
             if (self.fonts.items[i].id == id) return i;
         }
-        return Error.InvalidID;
+        return Error.InvalidAssetID;
     }
 
     pub fn init(self: *AssetManager) Error!void {
@@ -152,13 +152,13 @@ pub const AssetManager = struct {
         self.textures = std.ArrayList(Texture).init(self.alloc);
         self.fonts = std.ArrayList(Font).init(self.alloc);
         self.shaders.resize(5) catch {
-            return Error.FailedToResize;
+            return Error.FailedToAllocate;
         };
         self.textures.resize(32) catch {
-            return Error.FailedToResize;
+            return Error.FailedToAllocate;
         };
         self.fonts.resize(5) catch {
-            return Error.FailedToResize;
+            return Error.FailedToAllocate;
         };
     }
 
@@ -220,7 +220,7 @@ pub const AssetManager = struct {
     pub fn loadShader(self: *AssetManager, id: u64, vertex: []const u8, fragment: []const u8) Error!void {
         if (self.isShaderExists(id)) {
             alog.err("shader(id: {}) already exists!", .{id});
-            return Error.AlreadyExists;
+            return Error.AssetAlreadyExists;
         }
         const program = try gl.shaderProgramCreate(self.alloc, vertex, fragment);
         try self.shaders.append(.{
@@ -241,7 +241,7 @@ pub const AssetManager = struct {
     pub fn loadTexturePro(self: *AssetManager, id: u64, texture: renderer.Texture) Error!void {
         if (self.isTextureExists(id)) {
             alog.err("texture(id: {}) already exists!", .{id});
-            return Error.AlreadyExists;
+            return Error.AssetAlreadyExists;
         }
         try self.textures.append(.{ .id = id, .data = texture });
         alog.notice("texture(id: {}) loaded!", .{id});
@@ -258,7 +258,7 @@ pub const AssetManager = struct {
     pub fn loadFontPro(self: *AssetManager, id: u64, font: renderer.Font) Error!void {
         if (self.isFontExists(id)) {
             alog.err("font(id: {}) already exists!", .{id});
-            return Error.AlreadyExists;
+            return Error.AssetAlreadyExists;
         }
         try self.fonts.append(.{ .id = id, .data = font });
         alog.notice("font(id: {}) loaded!", .{id});
@@ -308,9 +308,9 @@ pub const AssetManager = struct {
 
     pub fn getShader(self: AssetManager, id: u64) Error!u32 {
         const i = self.findShader(id) catch |err| {
-            if (err == Error.InvalidID) {
+            if (err == Error.InvalidAssetID) {
                 alog.warn("shader(id: {}) does not exists!", .{id});
-                return Error.InvalidID;
+                return Error.InvalidAssetID;
             } else return err;
         };
         return self.shaders.items[i].data;
@@ -318,9 +318,9 @@ pub const AssetManager = struct {
 
     pub fn getTexture(self: AssetManager, id: u64) Error!renderer.Texture {
         const i = self.findTexture(id) catch |err| {
-            if (err == Error.InvalidID) {
+            if (err == Error.InvalidAssetID) {
                 alog.warn("texture(id: {}) does not exists!", .{id});
-                return Error.InvalidID;
+                return Error.InvalidAssetID;
             } else return err;
         };
         return self.textures.items[i].data;
@@ -328,9 +328,9 @@ pub const AssetManager = struct {
 
     pub fn getFont(self: AssetManager, id: u64) Error!renderer.Font {
         const i = self.findFont(id) catch |err| {
-            if (err == Error.InvalidID) {
+            if (err == Error.InvalidAssetID) {
                 alog.warn("font(id: {}) does not exists!", .{id});
-                return Error.InvalidID;
+                return Error.InvalidAssetID;
             } else return err;
         };
         return self.fonts.items[i].data;
@@ -403,7 +403,7 @@ pub fn findPrivateBatch() Error!usize {
             return i;
         }
     }
-    return Error.FailedToFind;
+    return Error.FailedToFindPrivateBatch;
 }
 
 pub fn destroyPrivateBatch(i: usize) void {

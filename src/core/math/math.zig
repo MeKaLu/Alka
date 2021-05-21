@@ -93,6 +93,30 @@ pub const Rectangle = struct {
     }
 };
 
+/// Transform 2D
+pub const Transform2D = struct {
+    position: Vec2f = undefined,
+    size: Vec2f = undefined,
+    /// in degrees
+    rotation: f32 = undefined,
+
+    pub fn getRectangle(self: Transform2D) Rectangle {
+        return Rectangle{ .position = self.position, .size = self.size };
+    }
+
+    /// AABB collision detection
+    /// between to transform(rotation does not count)
+    pub fn aabb(self: Transform2D, other: Transform2D) bool {
+        return Rectangle.aabb(self.getRectangle(), other.getRectangle());
+    }
+
+    /// AABB collision detection
+    /// between to transform(rotation does not count)
+    pub fn aabbMeeting(self: Transform2D, other: Transform2D, meeting: Vec2f) bool {
+        return Rectangle.aabbMeeting(self.getRectangle(), other.getRectangle(), meeting);
+    }
+};
+
 /// 2D Camera
 pub const Camera2D = struct {
     position: Vec2f = Vec2f{ .x = 0, .y = 0 },
