@@ -43,7 +43,7 @@ pub const embed = struct {
     pub const white_texture_id = 0;
 };
 
-const perror = error{ EngineIsInitialized, EngineIsNotInitialized, FailedToFind };
+const perror = error{ InvalidBatch, InvalidMVP, EngineIsInitialized, EngineIsNotInitialized, FailedToFind };
 const asseterror = error{ AlreadyExists, FailedToResize, InvalidID };
 /// Error set
 pub const Error = perror || asseterror || core.Error;
@@ -64,15 +64,46 @@ pub const Callbacks = struct {
     close: ?fn () void = null,
 };
 
-pub const BatchState = enum { unknown, empty, active, deactive };
-pub const Batch = struct {
-    state: BatchState = BatchState.unknown,
+pub const PrivateBatchState = enum { unknown, empty, active, deactive };
+pub const PrivateBatch = struct {
+    state: PrivateBatchState = PrivateBatchState.unknown,
     mode: gl.DrawMode = undefined,
     shader: u32 = undefined,
     texture: renderer.Texture = undefined,
     cam2d: m.Camera2D = undefined,
 
     data: Batch2DQuad = undefined,
+
+    drawfun: fn (corebatch: Batch2DQuad, mode: gl.DrawMode, shader: *u32, texture: *renderer.Texture, cam2d: *m.Camera2D) Error!void = undefined,
+};
+
+pub const Batch = struct {
+    id: i32 = -1,
+    mode: gl.DrawMode = undefined,
+    shader: u32 = undefined,
+    texture: renderer.Texture = undefined,
+    cam2d: *m.Camera2D = undefined,
+    subcounter: *const u32 = 0,
+
+    drawfun: fn (corebatch: Batch2DQuad, mode: gl.DrawMode, shader: *u32, texture: *renderer.Texture, cam2d: *m.Camera2D) Error!void = drawDefault,
+
+    pub fn drawDefault(corebatch: Batch2DQuad, mode: gl.DrawMode, shader: *u32, texture: *renderer.Texture, cam2d: *m.Camera2D) Error!void {
+        cam2d.attach();
+        defer cam2d.detach();
+
+        gl.shaderProgramUse(shader.*);
+        defer gl.shaderProgramUse(0);
+
+        gl.textureActive(.texture0);
+        gl.textureBind(.t2D, texture.id);
+        defer gl.textureBind(.t2D, 0);
+
+        const mvploc = gl.shaderProgramGetUniformLocation(shader.*, "MVP");
+        if (mvploc == -1) return Error.InvalidMVP;
+        gl.shaderProgramSetMat4x4f(mvploc, cam2d.view);
+
+        try corebatch.draw(mode);
+    }
 };
 
 pub const AssetManager = struct {
@@ -318,7 +349,7 @@ pub const Private = struct {
 
     force_batch: ?usize = null,
     batch_counter: usize = 0,
-    batchs: []Batch = undefined,
+    batchs: []PrivateBatch = undefined,
 
     callbacks: Callbacks = Callbacks{},
     alloc: *std.mem.Allocator = undefined,
@@ -342,11 +373,11 @@ pub fn setstruct(ps: *Private) void {
     p = ps;
 }
 
-pub fn createBatch() Error!void {
+pub fn createPrivateBatch() Error!void {
     var i: usize = 0;
     // NOTE: try to find empty batch before allocating one
     if (p.batch_counter == 0) {
-        p.batchs = try p.alloc.alloc(Batch, 1);
+        p.batchs = try p.alloc.alloc(PrivateBatch, 1);
         p.batch_counter += 1;
     } else {
         i = p.batch_counter;
@@ -354,61 +385,50 @@ pub fn createBatch() Error!void {
         p.batch_counter += 1;
     }
 
+    p.batchs[i].drawfun = Batch.drawDefault;
     p.batchs[i].cam2d = p.defaults.cam2d;
     p.batchs[i].shader = try p.assetmanager.getShader(embed.default_shader.id);
     p.batchs[i].texture = try p.assetmanager.getTexture(embed.white_texture_id);
-    p.batchs[i].state = BatchState.empty;
+    p.batchs[i].state = PrivateBatchState.empty;
 
     p.batchs[i].data.submission_counter = 0;
     p.batchs[i].data.submitfn = submitQuadFn;
     try p.batchs[i].data.create(p.batchs[i].shader, setShaderAttribs);
 }
 
-pub fn findBatch() Error!usize {
+pub fn findPrivateBatch() Error!usize {
     var i: usize = 0;
     while (i < p.batch_counter) : (i += 1) {
-        if (p.batchs[i].state == BatchState.empty) {
+        if (p.batchs[i].state == PrivateBatchState.empty) {
             return i;
         }
     }
     return Error.FailedToFind;
 }
 
-pub fn destroyBatch(i: usize) void {
+pub fn destroyPrivateBatch(i: usize) void {
     p.batchs[i].data.destroy();
     p.batchs[i].data.submission_counter = 0;
-    p.batchs[i] = Batch{};
+    p.batchs[i] = PrivateBatch{};
 }
 
-pub fn drawBatch(i: usize) Error!void {
+pub fn drawPrivateBatch(i: usize) Error!void {
     var b = &p.batchs[i];
-    b.cam2d.attach();
-    defer b.cam2d.detach();
 
-    gl.shaderProgramUse(b.shader);
-    defer gl.shaderProgramUse(0);
-
-    c.glActiveTexture(c.GL_TEXTURE0);
-    gl.textureBind(gl.TextureType.t2D, b.texture.id);
-    defer gl.textureBind(gl.TextureType.t2D, 0);
-
-    const mvploc = gl.shaderProgramGetUniformLocation(b.shader, "MVP");
-    gl.shaderProgramSetMat4x4f(mvploc, @ptrCast([*]const f32, &b.cam2d.view.toArray()));
-
-    try b.data.draw(b.mode);
+    try b.drawfun(b.data, b.mode, &b.shader, &b.texture, &b.cam2d);
 }
 
-pub fn renderBatch(i: usize) Error!void {
-    if (p.batchs[i].state == BatchState.active) {
-        try drawBatch(i);
+pub fn renderPrivateBatch(i: usize) Error!void {
+    if (p.batchs[i].state == PrivateBatchState.active) {
+        try drawPrivateBatch(i);
     } else alog.warn("batch(id: {}) <render> operation cannot be done, state: {}", .{ i, p.batchs[i].state });
 }
 
-pub fn cleanBatch(i: usize) Error!void {
+pub fn cleanPrivateBatch(i: usize) Error!void {
     p.batchs[i].data.cleanAll();
     p.batchs[i].data.submission_counter = 0;
     p.batchs[i].cam2d = p.defaults.cam2d;
-    p.batchs[i].state = BatchState.empty;
+    p.batchs[i].state = PrivateBatchState.empty;
 }
 
 pub fn closeCallback(handle: ?*glfw.Window) void {
@@ -476,8 +496,8 @@ pub fn submitTextureQuad(i: usize, p0: m.Vec2f, p1: m.Vec2f, p2: m.Vec2f, p3: m.
 
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
-            try drawBatch(i);
-            try cleanBatch(i);
+            try drawPrivateBatch(i);
+            try cleanPrivateBatch(i);
 
             try p.batchs[i].data.submitDrawable(vx);
             alog.notice("batch(id: {}) flushed!", .{i});

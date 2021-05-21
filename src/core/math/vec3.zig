@@ -86,6 +86,11 @@ pub fn Generic(comptime T: type) type {
                         .z = mat.m2 * x + mat.m6 * y + mat.m10 * z + mat.m14,
                     };
                 }
+
+                /// Converts the vec3 into the array
+                pub fn toArray(self: Self) [3]T {
+                    return [3]T{ self.x, self.y, self.z };
+                }
             };
         },
         else => @compileError("Vector3 not implemented for " ++ @typeName(T)),

@@ -19,10 +19,6 @@
 //3. This notice may not be removed or altered from any source
 //   distribution.
 
-const cos = @import("std").math.cos;
-const sqrt = @import("std").math.sqrt;
-const sin = @import("std").math.sin;
-
 /// Generic Matrix4x4 Type, right handed column major
 pub fn Generic(comptime T: type) type {
     switch (T) {
@@ -263,15 +259,15 @@ pub fn Generic(comptime T: type) type {
                     var y = y0;
                     var z = z0;
 
-                    var len = sqrt(x * x + y * y + z * z);
+                    var len = @sqrt(x * x + y * y + z * z);
                     if ((len != 1) and (len != 0)) {
                         len = 1 / len;
                         x *= len;
                         y *= len;
                         z *= len;
                     }
-                    const sinres = sin(angle);
-                    const cosres = cos(angle);
+                    const sinres = @sin(angle);
+                    const cosres = @cos(angle);
                     const t = 1.0 - cosres;
 
                     return Self{

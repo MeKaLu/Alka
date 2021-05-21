@@ -20,9 +20,6 @@
 //   distribution.
 
 const atan2 = @import("std").math.atan2;
-const sqrt = @import("std").math.sqrt;
-const cos = @import("std").math.cos;
-const sin = @import("std").math.sin;
 
 usingnamespace @import("common.zig");
 
@@ -88,8 +85,8 @@ pub fn Generic(comptime T: type) type {
                 pub fn moveTowards(v1: Self, v2: Self, speed: T) Self {
                     const ang: T = atan2(T, v2.y - v1.y, v2.x - v1.x);
                     return Self{
-                        .x = v1.x + cos(ang) * speed,
-                        .y = v1.y + sin(ang) * speed,
+                        .x = v1.x + @cos(ang) * speed,
+                        .y = v1.y + @sin(ang) * speed,
                     };
                 }
 
@@ -97,7 +94,12 @@ pub fn Generic(comptime T: type) type {
                 pub fn distance(v1: Self, v2: Self) T {
                     const dx = v1.x - v2.x;
                     const dy = v1.y - v2.y;
-                    return sqrt(dx * dx + dy * dy);
+                    return @sqrt(dx * dx + dy * dy);
+                }
+
+                /// Converts the vec2 into the array
+                pub fn toArray(self: Self) [2]T {
+                    return [2]T{ self.x, self.y };
                 }
             };
         },

@@ -6,27 +6,15 @@ usingnamespace alka.log;
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;
 
-fn update(dt: f32) !void {
-    mlog.notice("update", .{});
-}
+fn update(dt: f32) !void {}
 
-fn fupdate(dt: f32) !void {
-    mlog.notice("fixed update", .{});
-}
+fn fupdate(dt: f32) !void {}
 
-fn draw() !void {
-    mlog.notice("draw", .{});
-}
+fn draw() !void {}
 
-// cannot let out error, it's a C callback
-fn resize(w: i32, h: i32) void {
-    mlog.notice("resize", .{});
-}
+fn resize(w: i32, h: i32) void {}
 
-// cannot let out error, it's a C callback
-fn close() void {
-    mlog.notice("close", .{});
-}
+fn close() void {}
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -39,14 +27,10 @@ pub fn main() !void {
         .close = close,
     };
 
-    // .. fpslimit if zero vsync=on, is resizable?
-    try alka.init(&gpa.allocator, callbacks, 1024, 768, "Basic Setup", 0, false);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "main", 0, false);
 
-    // opens the window
     try alka.open();
-    // runs the loop
     try alka.update();
-    // closes the window
     try alka.close();
 
     try alka.deinit();

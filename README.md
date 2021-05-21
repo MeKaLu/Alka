@@ -18,6 +18,7 @@ Get started [now](https://github.com/Kiakra/Alka/blob/master/get-started.md)
 - [x] 2D Texture drawing
 - [x] 2D Text drawing 
 - [x] Simple ecs
+- [ ] Simple 2D lightning
 - [ ] Simple 2D physics
 - [ ] GUI system
 - [ ] Audio

@@ -20,6 +20,7 @@
 //   distribution.
 
 const c = @import("c.zig");
+const m = @import("math/math.zig");
 const std = @import("std");
 
 usingnamespace @import("log.zig");
@@ -73,6 +74,7 @@ pub const TextureParamaterType = enum {
     wrap_s,
     wrap_t,
     wrap_r,
+    texture0,
 };
 
 /// Texture paramater
@@ -294,17 +296,32 @@ pub fn shaderProgramSetFloat(loc: i32, value: f32) void {
 }
 
 /// Sets the vec2 data
-pub fn shaderProgramSetVec2f(loc: i32, value: [*]const f32) void {
+pub fn shaderProgramSetVec2f(loc: i32, value: m.Vec2f) void {
+    shaderProgramSetVec2fV(loc, @ptrCast([*]const f32, &value.toArray()));
+}
+
+/// Sets the vec3 data
+pub fn shaderProgramSetVec3f(loc: i32, value: m.Vec3f) void {
+    shaderProgramSetVec3fV(loc, @ptrCast([*]const f32, &value.toArray()));
+}
+
+/// Sets the matrix data
+pub fn shaderProgramSetMat4x4f(loc: i32, value: m.Mat4x4f) void {
+    shaderProgramSetMat4x4fV(loc, @ptrCast([*]const f32, &value.toArray()));
+}
+
+/// Sets the vec2 data
+pub fn shaderProgramSetVec2fV(loc: i32, value: [*]const f32) void {
     c.glUniform2fv(loc, 1, value);
 }
 
 /// Sets the vec3 data
-pub fn shaderProgramSetVec3f(loc: i32, value: [*]const f32) void {
+pub fn shaderProgramSetVec3fV(loc: i32, value: [*]const f32) void {
     c.glUniform3fv(loc, 1, value);
 }
 
 /// Sets the matrix data
-pub fn shaderProgramSetMat4x4f(loc: i32, data: [*]const f32) void {
+pub fn shaderProgramSetMat4x4fV(loc: i32, data: [*]const f32) void {
     c.glUniformMatrix4fv(loc, 1, c.GL_FALSE, data);
 }
 
@@ -355,6 +372,11 @@ pub fn textureTexImage2D(comptime target: TextureType, level: i32, comptime inte
 /// Set texture parameters
 pub fn textureTexParameteri(comptime target: TextureType, comptime pname: TextureParamaterType, comptime param: TextureParamater) void {
     c.glTexParameteri(pdecideTextureType(target), pdecideTextureParamType(pname), pdecideTextureParam(param));
+}
+
+/// Set the active texture
+pub fn textureActive(comptime texture: TextureParamaterType) void {
+    c.glActiveTexture(pdecideTextureParamType(texture));
 }
 
 // ENDTEXTURE
@@ -427,6 +449,7 @@ fn pdecideTextureParamType(comptime typ: TextureParamaterType) u32 {
         TextureParamaterType.wrap_s => return c.GL_TEXTURE_WRAP_S,
         TextureParamaterType.wrap_t => return c.GL_TEXTURE_WRAP_T,
         TextureParamaterType.wrap_r => return c.GL_TEXTURE_WRAP_R,
+        TextureParamaterType.texture0 => return c.GL_TEXTURE0,
     }
 }
 

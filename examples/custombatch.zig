@@ -15,10 +15,10 @@ const vertex_shader =
     \\
     \\out vec2 ourTexCoord;
     \\out vec4 ourColour;
-    \\uniform mat4 MVP;
+    \\uniform mat4 view;
     \\
     \\void main() {
-    \\  gl_Position = MVP * vec4(aPos.xy, 0.0, 1.0);
+    \\  gl_Position = view * vec4(aPos.xy, 0.0, 1.0);
     \\  ourTexCoord = aTexCoord;
     \\  ourColour = aColour;
     \\}
@@ -37,13 +37,35 @@ const fragment_shader =
     \\}
 ;
 
+fn batchDraw(corebatch: alka.Batch2DQuad, mode: alka.gl.DrawMode, shader: *u32, texture: *alka.renderer.Texture, cam2d: *m.Camera2D) alka.Error!void {
+    cam2d.attach();
+    defer cam2d.detach();
+
+    alka.gl.shaderProgramUse(shader.*);
+    defer alka.gl.shaderProgramUse(0);
+
+    alka.gl.textureActive(.texture0);
+    alka.gl.textureBind(.t2D, texture.id);
+    defer alka.gl.textureBind(.t2D, 0);
+
+    const mvploc = alka.gl.shaderProgramGetUniformLocation(shader.*, "view");
+    alka.gl.shaderProgramSetMat4x4f(mvploc, cam2d.view);
+
+    try corebatch.draw(mode);
+}
+
 fn draw() !void {
     const asset = alka.getAssetManager();
 
     // create the batch
     // NOTE: if the batch exists, it won't create one, instead returns the existing batch
     // drawmode, shader_id, texture_id
-    const batch = try alka.createBatch(alka.gl.DrawMode.triangles, 1, 0);
+    var batch = try alka.createBatch(alka.gl.DrawMode.triangles, 1, 0);
+    // this way we can change how we draw the batch
+    // if not used, it'll draw the defaultbatch
+    // which stored at: `Batch.drawDefault`
+    batch.drawfun = batchDraw;
+    alka.setBatchFun(batch);
 
     // there is also
 

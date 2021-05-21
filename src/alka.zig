@@ -48,10 +48,8 @@ pub const window = @import("core/window.zig");
 const m = math;
 const alog = std.log.scoped(.alka);
 
-const perror = error{InvalidBatch};
-
 /// Error set
-pub const Error = perror || pr.Error;
+pub const Error = pr.Error;
 
 pub const max_quad = pr.max_quad;
 pub const Vertex2D = pr.Vertex2D;
@@ -62,15 +60,8 @@ pub const Colour = pr.Colour;
 // var pupdateproc: ?fn (deltatime: f32) !void = null;
 //                                       ^
 pub const Callbacks = pr.Callbacks;
+pub const Batch = pr.Batch;
 pub const AssetManager = pr.AssetManager;
-pub const Batch = struct {
-    id: i32 = -1,
-    mode: gl.DrawMode = undefined,
-    shader: u32 = undefined,
-    texture: renderer.Texture = undefined,
-    cam2d: *m.Camera2D = undefined,
-    subcounter: *const u32 = 0,
-};
 
 var pengineready: bool = false;
 var p: *pr.Private = undefined;
@@ -143,8 +134,8 @@ pub fn deinit() Error!void {
     if (p.batch_counter > 0) {
         var i: usize = 0;
         while (i < p.batch_counter) : (i += 1) {
-            if (p.batchs[i].state != pr.BatchState.unknown) {
-                pr.destroyBatch(i);
+            if (p.batchs[i].state != pr.PrivateBatchState.unknown) {
+                pr.destroyPrivateBatch(i);
                 alog.notice("batch(id: {}) destroyed!", .{i});
             }
         }
@@ -213,7 +204,7 @@ pub fn update() !void {
         {
             var i: usize = 0;
             while (i < p.batch_counter) : (i += 1) {
-                try pr.renderBatch(i);
+                try pr.renderPrivateBatch(i);
             }
         }
 
@@ -224,7 +215,7 @@ pub fn update() !void {
         {
             var i: usize = 0;
             while (i < p.batch_counter) : (i += 1) {
-                try pr.cleanBatch(i);
+                try pr.cleanPrivateBatch(i);
             }
         }
 
@@ -288,7 +279,7 @@ pub fn getBatch(mode: gl.DrawMode, sh_id: u64, texture_id: u64) Error!Batch {
 
     var i: usize = 0;
     while (i < p.batch_counter) : (i += 1) {
-        if (p.batchs[i].state == pr.BatchState.active and p.batchs[i].mode == mode and p.batchs[i].shader == sh and p.batchs[i].texture.id == texture.id) return Batch{
+        if (p.batchs[i].state == pr.PrivateBatchState.active and p.batchs[i].mode == mode and p.batchs[i].shader == sh and p.batchs[i].texture.id == texture.id) return Batch{
             .id = @intCast(i32, i),
             .mode = p.batchs[i].mode,
             .shader = p.batchs[i].shader,
@@ -306,7 +297,7 @@ pub fn getBatch(mode: gl.DrawMode, sh_id: u64, texture_id: u64) Error!Batch {
 pub fn getBatchNoID(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Error!Batch {
     var i: usize = 0;
     while (i < p.batch_counter) : (i += 1) {
-        if (p.batchs[i].state == pr.BatchState.active and p.batchs[i].mode == mode and p.batchs[i].shader == sh and p.batchs[i].texture.id == texture.id) return Batch{
+        if (p.batchs[i].state == pr.PrivateBatchState.active and p.batchs[i].mode == mode and p.batchs[i].shader == sh and p.batchs[i].texture.id == texture.id) return Batch{
             .id = @intCast(i32, i),
             .mode = p.batchs[i].mode,
             .shader = p.batchs[i].shader,
@@ -321,15 +312,15 @@ pub fn getBatchNoID(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Error
 /// Creates a batch with given attribs
 /// Note: updating every frame is the way to go
 pub fn createBatch(mode: gl.DrawMode, sh_id: u64, texture_id: u64) Error!Batch {
-    const i = pr.findBatch() catch |err| {
+    const i = pr.findPrivateBatch() catch |err| {
         if (err == Error.FailedToFind) {
-            try pr.createBatch();
+            try pr.createPrivateBatch();
             return createBatch(mode, sh_id, texture_id);
         } else return err;
     };
 
     var b = &p.batchs[i];
-    b.state = pr.BatchState.active;
+    b.state = pr.PrivateBatchState.active;
     b.mode = mode;
     b.shader = try p.assetmanager.getShader(sh_id);
     b.texture = try p.assetmanager.getTexture(texture_id);
@@ -349,15 +340,15 @@ pub fn createBatch(mode: gl.DrawMode, sh_id: u64, texture_id: u64) Error!Batch {
 /// Note: updating every frame is the way to go
 /// usefull when using non-assetmanager loaded shaders and textures
 pub fn createBatchNoID(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Error!Batch {
-    const i = pr.findBatch() catch |err| {
+    const i = pr.findPrivateBatch() catch |err| {
         if (err == Error.FailedToFind) {
-            try pr.createBatch();
+            try pr.createPrivateBatch();
             return createBatchNoID(mode, sh, texture);
         } else return err;
     };
 
     var b = &p.batchs[i];
-    b.state = pr.BatchState.active;
+    b.state = pr.PrivateBatchState.active;
     b.mode = mode;
     b.shader = sh;
     b.texture = texture;
@@ -373,6 +364,13 @@ pub fn createBatchNoID(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Er
     };
 }
 
+/// Sets the batch drawfun
+/// use this after `batch.drawfun = fun`
+pub fn setBatchFun(batch: Batch) void {
+    var b = &p.batchs[@intCast(usize, batch.id)];
+    b.drawfun = batch.drawfun;
+}
+
 /// Sets the callbacks
 pub fn setCallbacks(calls: Callbacks) void {
     p.callbacks = calls;
@@ -386,13 +384,13 @@ pub fn setBackgroundColour(r: f32, g: f32, b: f32) void {
 /// Renders the given batch 
 pub fn renderBatch(batch: Batch) Error!void {
     const i = @intCast(usize, batch.id);
-    return pr.drawBatch(i);
+    return pr.drawPrivateBatch(i);
 }
 
 /// Cleans the batch
-pub fn cleanBatch(batch: Batch) Error!void {
+pub fn cleanPrivateBatch(batch: Batch) Error!void {
     const i = @intCast(usize, batch.id);
-    return pr.cleanBatch(i);
+    return pr.cleanPrivateBatch(i);
 }
 
 /// Forces to use the given batch
@@ -432,8 +430,8 @@ pub fn drawPixel(pos: m.Vec2f, colour: Colour) Error!void {
 
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
-            try pr.drawBatch(i);
-            try pr.cleanBatch(i);
+            try pr.drawPrivateBatch(i);
+            try pr.cleanPrivateBatch(i);
             //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
@@ -472,8 +470,8 @@ pub fn drawLine(start: m.Vec2f, end: m.Vec2f, thickness: f32, colour: Colour) Er
 
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
-            try pr.drawBatch(i);
-            try pr.cleanBatch(i);
+            try pr.drawPrivateBatch(i);
+            try pr.cleanPrivateBatch(i);
             //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
@@ -527,8 +525,8 @@ pub fn drawCircleLinesV(position: m.Vec2f, radius: f32, segment_count: u32, colo
 
         p.batchs[i].data.submitDrawable(vx) catch |err| {
             if (err == Error.ObjectOverflow) {
-                try pr.drawBatch(i);
-                try pr.cleanBatch(i);
+                try pr.drawPrivateBatch(i);
+                try pr.cleanPrivateBatch(i);
                 //alog.notice("batch(id: {}) flushed!", .{i});
 
                 return p.batchs[i].data.submitDrawable(vx);
@@ -568,8 +566,8 @@ pub fn drawRectangle(rect: m.Rectangle, colour: Colour) Error!void {
 
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
-            try pr.drawBatch(i);
-            try pr.cleanBatch(i);
+            try pr.drawPrivateBatch(i);
+            try pr.cleanPrivateBatch(i);
             //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
@@ -608,8 +606,8 @@ pub fn drawRectangleLines(rect: m.Rectangle, colour: Colour) Error!void {
 
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
-            try pr.drawBatch(i);
-            try pr.cleanBatch(i);
+            try pr.drawPrivateBatch(i);
+            try pr.cleanPrivateBatch(i);
             //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
@@ -660,8 +658,8 @@ pub fn drawRectangleAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: 
 
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
-            try pr.drawBatch(i);
-            try pr.cleanBatch(i);
+            try pr.drawPrivateBatch(i);
+            try pr.cleanPrivateBatch(i);
             //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
@@ -712,8 +710,8 @@ pub fn drawRectangleLinesAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, col
 
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
-            try pr.drawBatch(i);
-            try pr.cleanBatch(i);
+            try pr.drawPrivateBatch(i);
+            try pr.cleanPrivateBatch(i);
             //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
