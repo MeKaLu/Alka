@@ -9,6 +9,9 @@ usingnamespace alka.log;
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;
 
+var virtualwidth: i32 = 1280;
+var virtualheight: i32 = 720;
+
 var vel: f32 = 0;
 var dir: f32 = 1;
 
@@ -26,7 +29,9 @@ fn update(dt: f32) !void {
 
 fn fupdate(dt: f32) !void {
     var canvas = try gui.getCanvasPtr(0);
-    canvas.transform.position.x += vel;
+    var tr = try canvas.getTransformPtr(0);
+    //canvas.transform.position.x += vel;
+    //tr.position.x -= vel;
     vel = 0;
     try gui.fixed(dt);
 }
@@ -36,6 +41,10 @@ fn draw() !void {
     try gui.draw();
 
     try canvas.drawLines(alka.Colour.rgba(255, 0, 0, 255));
+}
+
+fn resize(w: i32, h: i32) void {
+    alka.autoResize(virtualwidth, virtualheight, w, h);
 }
 
 fn updateButton(self: *gui.Element, dt: f32) !void {
@@ -98,11 +107,12 @@ pub fn main() !void {
         .update = update,
         .fixed = fupdate,
         .draw = draw,
-        .resize = null,
+        .resize = resize,
         .close = null,
     };
 
-    try alka.init(&gpa.allocator, callbacks, 1024, 768, "main", 0, false);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "GUI", 0, true);
+    alka.autoResize(virtualwidth, virtualheight, 1024, 768);
 
     var inp = alka.getInput();
     try inp.bindMouse(.ButtonLeft);
@@ -113,7 +123,7 @@ pub fn main() !void {
 
     // id, transform, colour
     var canvas = try gui.createCanvas(0, m.Transform2D{
-        .position = m.Vec2f{ .x = 300, .y = 300 },
+        .position = m.Vec2f{ .x = 500, .y = 300 },
         .origin = m.Vec2f{ .x = 250, .y = 150 },
         .size = m.Vec2f{ .x = 500, .y = 300 },
         .rotation = 0,
