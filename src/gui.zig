@@ -61,7 +61,6 @@ pub const Element = struct {
     id: ?u64 = null,
 
     transform: m.Transform2D = undefined,
-    original_transform: m.Transform2D = undefined,
 
     colour: alka.Colour = undefined,
     events: Events = Events{},
@@ -81,33 +80,13 @@ pub const Element = struct {
     pub fn deinit(self: *Element) void {
         self.id = null;
     }
-
-    /// Sets the original transform 
-    pub fn setTransform(self: *Element, tr: m.Transform2D) void {
-        self.original_transform = tr;
-    }
-
-    /// Scales
-    /// Multiplies with the original transform
-    /// which is set by `setTransform`
-    pub fn scale(self: *Element, ratio: f32) void {
-        self.transform.size.x = self.original_transform.size.x * ratio;
-        self.transform.size.y = self.original_transform.size.y * ratio;
-
-        self.transform.origin.x = self.original_transform.origin.x * ratio;
-        self.transform.origin.y = self.original_transform.origin.y * ratio;
-    }
 };
 
 const Canvas = struct {
-    alloc: *std.mem.Allocator = undefined,
-    id: ?u64 = null,
-
-    transform: m.Transform2D = undefined,
-    original_transform: m.Transform2D = undefined,
-
-    colour: alka.Colour = undefined,
-    elements: UniqueList(Element) = undefined,
+    const CElement = struct {
+        element: Element = undefined,
+        original_transform: m.Transform2D = undefined,
+    };
 
     /// Iterator
     pub const Iterator = struct {
@@ -118,7 +97,7 @@ const Canvas = struct {
             if (it.index >= it.parent.elements.items.len) return null;
             var result = &it.parent.elements.items[it.index];
             it.index += 1;
-            return if (result.data != null and result.data.?.id != null) &result.data.? else null;
+            return if (result.data != null and result.data.?.element.id != null) &result.data.?.element else null;
         }
 
         /// Reset the iterator
@@ -126,6 +105,14 @@ const Canvas = struct {
             it.index = 0;
         }
     };
+
+    alloc: *std.mem.Allocator = undefined,
+    id: ?u64 = null,
+
+    transform: m.Transform2D = undefined,
+
+    colour: alka.Colour = undefined,
+    elements: UniqueList(CElement) = undefined,
 
     fn calculateElementTransform(canvas: m.Transform2D, tr: m.Transform2D) m.Transform2D {
         const newpos = m.Vec2f.sub(canvas.position.add(tr.position.sub(tr.origin)), canvas.origin);
@@ -142,7 +129,7 @@ const Canvas = struct {
             .id = id,
             .transform = tr,
             .colour = colour,
-            .elements = try UniqueList(Element).init(alloc, 1),
+            .elements = try UniqueList(CElement).init(alloc, 1),
         };
     }
 
@@ -156,7 +143,7 @@ const Canvas = struct {
             if (entry.data != null) {
                 // .next() increases the index by 1
                 // so we need '- 1' to get the current entry
-                var element = &self.elements.items[it.index - 1].data.?;
+                var element = &self.elements.items[it.index - 1].data.?.element;
 
                 if (element.events.onDestroy) |fun| try fun(element);
                 element.deinit();
@@ -177,7 +164,10 @@ const Canvas = struct {
         const b0 = o0.x < o1.x + otr.size.x;
         const b1 = o0.y < o1.y + otr.size.y;
 
-        return b0 and b1;
+        const b2 = o0.x + tr.size.x > o1.x;
+        const b3 = o0.y + tr.size.y > o1.y;
+
+        return b0 and b1 and b2 and b3;
     }
 
     /// Creates a element
@@ -191,23 +181,24 @@ const Canvas = struct {
             colour,
         );
         element.events = events;
-        element.setTransform(transform);
-        try self.elements.append(id, element);
+        try self.elements.append(id, CElement{ .element = element, .original_transform = transform });
 
         var ptr = try self.elements.getPtr(id);
-        if (ptr.events.onCreate) |fun| try fun(ptr);
+        if (ptr.element.events.onCreate) |fun| try fun(&ptr.element);
 
-        return ptr;
+        return &ptr.element;
     }
 
     /// Returns the READ-ONLY element
     pub fn getElement(self: Canvas, id: u64) Error!Element {
-        return self.elements.get(id);
+        const con = try self.elements.get(id);
+        return con.element;
     }
 
     /// Returns the MUTABLE element
     pub fn getElementPtr(self: *Canvas, id: u64) Error!*Element {
-        return self.elements.getPtr(id);
+        var ptr = try self.elements.getPtr(id);
+        return &ptr.element;
     }
 
     /// Destroys a element
@@ -215,8 +206,8 @@ const Canvas = struct {
     pub fn destroyElement(self: *Canvas, id: u64) !void {
         var element = try self.elements.getPtr(id);
 
-        if (element.events.onDestroy) |fun| try fun(element);
-        element.deinit();
+        if (element.element.events.onDestroy) |fun| try fun(&element.element);
+        element.element.deinit();
 
         if (!self.elements.remove(id)) return Error.InvalidCanvasID;
     }
@@ -244,8 +235,9 @@ const Canvas = struct {
             if (entry.data != null) {
                 // .next() increases the index by 1
                 // so we need '- 1' to get the current entry
-                var element = &self.elements.items[it.index - 1].data.?;
-                element.transform = calculateElementTransform(self.transform, element.original_transform);
+                var celement = &self.elements.items[it.index - 1].data.?;
+                var element = &celement.element;
+                element.transform = calculateElementTransform(self.transform, celement.original_transform);
                 if (!self.isInside(element.transform)) continue;
 
                 if (element.events.update) |fun| try fun(element, dt);
@@ -333,8 +325,9 @@ const Canvas = struct {
             if (entry.data != null) {
                 // .next() increases the index by 1
                 // so we need '- 1' to get the current entry
-                var element = &self.elements.items[it.index - 1].data.?;
-                element.transform = calculateElementTransform(self.transform, element.original_transform);
+                var celement = &self.elements.items[it.index - 1].data.?;
+                var element = &celement.element;
+                element.transform = calculateElementTransform(self.transform, celement.original_transform);
                 if (!self.isInside(element.transform)) continue;
 
                 if (element.events.fixed) |fun| try fun(element, dt);
@@ -351,7 +344,9 @@ const Canvas = struct {
             if (entry.data != null) {
                 // .next() increases the index by 1
                 // so we need '- 1' to get the current entry
-                var element = &self.elements.items[it.index - 1].data.?;
+                var celement = &self.elements.items[it.index - 1].data.?;
+                var element = &celement.element;
+                element.transform = calculateElementTransform(self.transform, celement.original_transform);
                 if (!self.isInside(element.transform)) continue;
 
                 if (element.events.draw) |fun| try fun(element);
@@ -376,25 +371,18 @@ const Canvas = struct {
         );
     }
 
-    /// Sets the original transform 
-    pub fn setTransform(self: *Canvas, tr: m.Transform2D) void {
-        self.original_transform = tr;
+    /// Returns the original transform of the element
+    /// NOTE: READ-ONLY
+    pub fn getTransform(self: Canvas, id: u64) Error!m.Transform2D {
+        const con = try self.elements.get(id);
+        return con.original_transform;
     }
 
-    /// Scales
-    /// Multiplies with the original transform
-    /// which is set by `setTransform`
-    pub fn scale(self: *Canvas, ratio: f32) void {
-        self.transform.size.x = self.original_transform.size.x * ratio;
-        self.transform.size.y = self.original_transform.size.y * ratio;
-
-        self.transform.origin.x = self.original_transform.origin.x * ratio;
-        self.transform.origin.y = self.original_transform.origin.y * ratio;
-
-        var it = self.iterator();
-        while (it.next()) |element| {
-            element.scale(ratio);
-        }
+    /// Returns the original transform of the element
+    /// NOTE: MUTABLE
+    pub fn getTransformPtr(self: *Canvas, id: u64) Error!*m.Transform2D {
+        var ptr = try self.elements.getPtr(id);
+        return &ptr.original_transform;
     }
 
     /// Returns the iterator
@@ -407,9 +395,14 @@ const Canvas = struct {
 };
 
 const Private = struct {
+    const CCanvas = struct {
+        canvas: Canvas = undefined,
+        original_transform: m.Transform2D = undefined,
+    };
+
     alloc: *std.mem.Allocator = undefined,
 
-    canvas: UniqueList(Canvas) = undefined,
+    canvas: UniqueList(CCanvas) = undefined,
 
     is_initialized: bool = false,
 };
@@ -422,7 +415,7 @@ pub fn init(alloc: *std.mem.Allocator) Error!void {
 
     p.alloc = alloc;
 
-    p.canvas = try UniqueList(Canvas).init(p.alloc, 0);
+    p.canvas = try UniqueList(Private.CCanvas).init(p.alloc, 0);
 
     p.is_initialized = true;
     alog.info("fully initialized!", .{});
@@ -440,7 +433,7 @@ pub fn deinit() !void {
         if (entry.data != null) {
             // .next() increases the index by 1
             // so we need '- 1' to get the current entry
-            var canvas = &p.canvas.items[it.index - 1].data.?;
+            var canvas = &p.canvas.items[it.index - 1].data.?.canvas;
             try canvas.deinit();
         }
     }
@@ -458,23 +451,25 @@ pub fn createCanvas(id: u64, tr: m.Transform2D, col: alka.Colour) Error!*Canvas 
     if (!p.is_initialized) return Error.GUIisNotInitialized;
 
     var canvas = try Canvas.init(p.alloc, id, tr, col);
-    canvas.setTransform(tr);
-    try p.canvas.append(id, canvas);
-    return p.canvas.getPtr(id);
+    try p.canvas.append(id, Private.CCanvas{ .canvas = canvas, .original_transform = tr });
+    var ptr = try p.canvas.getPtr(id);
+    return &ptr.canvas;
 }
 
 /// Returns the READ-ONLY canvas
 pub fn getCanvas(id: u64) Error!Canvas {
     if (!p.is_initialized) return Error.GUIisNotInitialized;
 
-    return p.canvas.get(id);
+    const con = try p.canvas.get(id);
+    return con.canvas;
 }
 
 /// Returns the MUTABLE canvas
 pub fn getCanvasPtr(id: u64) Error!*Canvas {
     if (!p.is_initialized) return Error.GUIisNotInitialized;
 
-    return p.canvas.getPtr(id);
+    var ptr = try p.canvas.getPtr(id);
+    return &ptr.canvas;
 }
 
 /// Destroys a canvas
@@ -482,7 +477,8 @@ pub fn getCanvasPtr(id: u64) Error!*Canvas {
 pub fn destroyCanvas(id: u64) !void {
     if (!p.is_initialized) return Error.GUIisNotInitialized;
 
-    var canvas = try p.canvas.getPtr(id);
+    var ptr = try p.canvas.getPtr(id);
+    var canvas = &ptr.canvas;
     try canvas.deinit();
 
     if (!p.canvas.remove(id)) return Error.InvalidCanvasID;
@@ -497,7 +493,7 @@ pub fn update(dt: f32) !void {
         if (entry.data != null) {
             // .next() increases the index by 1
             // so we need '- 1' to get the current entry
-            var canvas = &p.canvas.items[it.index - 1].data.?;
+            var canvas = &p.canvas.items[it.index - 1].data.?.canvas;
             if (canvas.id != null) try canvas.update(dt);
         }
     }
@@ -512,7 +508,7 @@ pub fn fixed(dt: f32) !void {
         if (entry.data != null) {
             // .next() increases the index by 1
             // so we need '- 1' to get the current entry
-            var canvas = &p.canvas.items[it.index - 1].data.?;
+            var canvas = &p.canvas.items[it.index - 1].data.?.canvas;
             if (canvas.id != null) try canvas.fixed(dt);
         }
     }
@@ -527,7 +523,7 @@ pub fn draw() !void {
         if (entry.data != null) {
             // .next() increases the index by 1
             // so we need '- 1' to get the current entry
-            var canvas = &p.canvas.items[it.index - 1].data.?;
+            var canvas = &p.canvas.items[it.index - 1].data.?.canvas;
             if (canvas.id != null) try canvas.draw();
         }
     }
