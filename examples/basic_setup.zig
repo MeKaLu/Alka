@@ -44,7 +44,7 @@ pub fn main() !void {
     };
 
     // .. fpslimit if zero vsync=on, is resizable?
-    try alka.init(&gpa.allocator, callbacks, 1024, 768, "Basic Setup", 0, false);
+    try alka.init(&gpa.allocator, callbacks, 1024, 768, "Basic Setup", 0, true);
     alka.autoResize(virtualwidth, virtualheight, 1024, 768);
 
     // opens the window
