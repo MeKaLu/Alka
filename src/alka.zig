@@ -514,41 +514,73 @@ pub fn drawLine(start: m.Vec2f, end: m.Vec2f, thickness: f32, colour: Colour) Er
 }
 
 /// Draws a circle lines, 16 segments by default
-/// Draw mode: lineloop
-pub fn drawCircleLines(position: m.Vec2f, radius: f32, colour: Colour) Error!void {
-    return drawCircleLinesV(position, radius, 16, colour);
+/// Draw mode: triangles
+pub fn drawCircle(position: m.Vec2f, radius: f32, colour: Colour) Error!void {
+    return drawCircleV(position, radius, 0, 360, 16, colour);
 }
 
-/// Draws a circle lines
-/// Draw mode: lineloop
-pub fn drawCircleLinesV(position: m.Vec2f, radius: f32, segment_count: u32, colour: Colour) Error!void {
-    const segments: f32 = @intToFloat(f32, segment_count);
-
-    var i: usize = 0;
+// Source: https://github.com/raysan5/raylib/blob/f1ed8be5d7e2d966d577a3fd28e53447a398b3b6/src/shapes.c#L209
+/// Draws a circle
+/// Draw mode: triangles
+pub fn drawCircleV(center: m.Vec2f, radius: f32, segments: i32, startangle: i32, endangle: i32, colour: Colour) Error!void {
+    var batch_id: usize = 0;
     if (p.force_batch) |id| {
-        i = id;
+        batch_id = id;
     } else {
-        const batch = getBatch(gl.DrawMode.lineloop, pr.embed.default_shader.id, pr.embed.white_texture_id) catch |err| {
+        const batch = getBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, pr.embed.white_texture_id) catch |err| {
             if (err == Error.InvalidBatch) {
-                _ = try createBatch(gl.DrawMode.lineloop, pr.embed.default_shader.id, pr.embed.white_texture_id);
-                return drawCircleLinesV(position, radius, segment_count, colour);
+                _ = try createBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, pr.embed.white_texture_id);
+                return drawCircleV(center, radius, segments, startangle, endangle, colour);
             } else return err;
         };
 
-        i = @intCast(usize, batch.id);
+        batch_id = @intCast(usize, batch.id);
     }
 
-    var j: f32 = 0;
-    while (j < segments) : (j += 1) {
-        const theta = 2 * m.PI * j / segments;
+    const SMOOTH_CIRCLE_ERROR_RATE = comptime 0.5;
 
-        const x = radius * @cos(theta) + position.x;
-        const y = radius * @sin(theta) + position.y;
+    var iradius = radius;
+    var istartangle = startangle;
+    var iendangle = endangle;
+    var isegments = segments;
 
-        const pos0 = m.Vec2f{ .x = x, .y = y };
-        const pos1 = m.Vec2f{ .x = x, .y = y };
-        const pos2 = m.Vec2f{ .x = x, .y = y };
-        const pos3 = m.Vec2f{ .x = x, .y = y };
+    if (iradius <= 0.0) iradius = 0.1; // Avoid div by zero
+    // Function expects (endangle > startangle)
+    if (iendangle < istartangle) {
+        // Swap values
+        const tmp = istartangle;
+        istartangle = iendangle;
+        iendangle = tmp;
+    }
+
+    if (isegments < 4) {
+        // Calculate the maximum angle between segments based on the error rate (usually 0.5f)
+        const th: f32 = std.math.acos(2 * std.math.pow(f32, 1 - SMOOTH_CIRCLE_ERROR_RATE / iradius, 2) - 1);
+        isegments = @floatToInt(i32, (@intToFloat(f32, (iendangle - istartangle)) * @ceil(2 * m.PI / th) / 360));
+
+        if (isegments <= 0) isegments = 4;
+    }
+    const steplen: f32 = @intToFloat(f32, iendangle - istartangle) / @intToFloat(f32, isegments);
+    var angle: f32 = @intToFloat(f32, istartangle);
+
+    // NOTE: Every QUAD actually represents two segments
+    var i: i32 = 0;
+    while (i < @divTrunc(isegments, 2)) : (i += 1) {
+        const pos0 = m.Vec2f{ .x = center.x, .y = center.y };
+        const pos1 = m.Vec2f{
+            .x = center.x + @sin(m.deg2radf(angle)) * iradius,
+            .y = center.y + @cos(m.deg2radf(angle)) * iradius,
+        };
+        const pos2 = m.Vec2f{
+            .x = center.x + @sin(m.deg2radf(angle + steplen)) * iradius,
+            .y = center.y + @cos(m.deg2radf(angle + steplen)) * iradius,
+        };
+        const pos3 = m.Vec2f{
+            .x = center.x + @sin(m.deg2radf(angle + steplen * 2)) * iradius,
+            .y = center.y + @cos(m.deg2radf(angle + steplen * 2)) * iradius,
+        };
+
+        angle += steplen * 2;
 
         const vx = [Batch2DQuad.max_vertex_count]Vertex2D{
             .{ .position = pos0, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
@@ -557,15 +589,127 @@ pub fn drawCircleLinesV(position: m.Vec2f, radius: f32, segment_count: u32, colo
             .{ .position = pos3, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
         };
 
-        p.batchs[i].data.submitDrawable(vx) catch |err| {
+        p.batchs[batch_id].data.submitDrawable(vx) catch |err| {
             if (err == Error.ObjectOverflow) {
-                try pr.drawPrivateBatch(i);
-                try pr.cleanPrivateBatch(i);
+                try pr.drawPrivateBatch(batch_id);
+                try pr.cleanPrivateBatch(batch_id);
                 //alog.notice("batch(id: {}) flushed!", .{i});
 
-                return p.batchs[i].data.submitDrawable(vx);
+                return p.batchs[batch_id].data.submitDrawable(vx);
             } else return err;
         };
+    }
+    // NOTE: In case number of segments is odd, we add one last piece to the cake
+    if (@mod(isegments, 2) != 0) {
+        const pos0 = m.Vec2f{ .x = center.x, .y = center.y };
+        const pos1 = m.Vec2f{
+            .x = center.x + @sin(m.deg2radf(angle)) * iradius,
+            .y = center.y + @cos(m.deg2radf(angle)) * iradius,
+        };
+        const pos2 = m.Vec2f{
+            .x = center.x + @sin(m.deg2radf(angle + steplen)) * iradius,
+            .y = center.y + @cos(m.deg2radf(angle + steplen)) * iradius,
+        };
+        const pos3 = m.Vec2f{ .x = center.x, .y = center.y };
+
+        const vx = [Batch2DQuad.max_vertex_count]Vertex2D{
+            .{ .position = pos0, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+            .{ .position = pos1, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+            .{ .position = pos2, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+            .{ .position = pos3, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
+        };
+
+        p.batchs[batch_id].data.submitDrawable(vx) catch |err| {
+            if (err == Error.ObjectOverflow) {
+                try pr.drawPrivateBatch(batch_id);
+                try pr.cleanPrivateBatch(batch_id);
+                //alog.notice("batch(id: {}) flushed!", .{i});
+
+                return p.batchs[batch_id].data.submitDrawable(vx);
+            } else return err;
+        };
+    }
+}
+
+/// Draws a circle lines, 16 segments by default
+/// Draw mode: lines
+pub fn drawCircleLines(position: m.Vec2f, radius: f32, colour: Colour) Error!void {
+    return drawCircleLinesV(position, radius, 16, 0, 360, colour);
+}
+
+// source: https://github.com/raysan5/raylib/blob/f1ed8be5d7e2d966d577a3fd28e53447a398b3b6/src/shapes.c#L298
+/// Draws a circle lines
+/// Draw mode: lines
+pub fn drawCircleLinesV(center: m.Vec2f, radius: f32, segments: i32, startangle: i32, endangle: i32, colour: Colour) Error!void {
+    const SMOOTH_CIRCLE_ERROR_RATE = comptime 0.5;
+
+    var isegments: i32 = segments;
+
+    var istartangle: i32 = startangle;
+    var iendangle: i32 = endangle;
+    var iradius = radius;
+
+    if (iradius <= 0.0) iradius = 0.1; // Avoid div by zero
+
+    // Function expects (endangle > startangle)
+    if (iendangle < istartangle) {
+        // Swap values
+        const tmp = istartangle;
+        istartangle = iendangle;
+        iendangle = tmp;
+    }
+
+    if (isegments < 4) {
+        // Calculate the maximum angle between segments based on the error rate (usually 0.5f)
+        const th: f32 = std.math.acos(2 * std.math.pow(f32, 1 - SMOOTH_CIRCLE_ERROR_RATE / iradius, 2) - 1);
+        isegments = @floatToInt(i32, (@intToFloat(f32, (iendangle - istartangle)) * @ceil(2 * m.PI / th) / 360));
+
+        if (isegments <= 0) isegments = 4;
+    }
+
+    const steplen: f32 = @intToFloat(f32, iendangle - istartangle) / @intToFloat(f32, isegments);
+    var angle: f32 = @intToFloat(f32, istartangle);
+
+    // Hide the cap lines when the circle is full
+    var showcaplines: bool = true;
+
+    if (@mod(iendangle - istartangle, 360) == 0) {
+        showcaplines = false;
+    }
+
+    if (showcaplines) {
+        const pos0 = m.Vec2f{ .x = center.x, .y = center.y };
+        const pos1 = m.Vec2f{
+            .x = center.x + @sin(m.deg2radf(angle)) * iradius,
+            .y = center.y + @cos(m.deg2radf(angle)) * iradius,
+        };
+
+        try drawLine(pos0, pos1, 1, colour);
+    }
+
+    var i: i32 = 0;
+    while (i < isegments) : (i += 1) {
+        const pos1 = m.Vec2f{
+            .x = center.x + @sin(m.deg2radf(angle)) * iradius,
+            .y = center.y + @cos(m.deg2radf(angle)) * iradius,
+        };
+        const pos2 = m.Vec2f{
+            .x = center.x + @sin(m.deg2radf(angle + steplen)) * iradius,
+            .y = center.y + @cos(m.deg2radf(angle + steplen)) * iradius,
+        };
+
+        try drawLine(pos1, pos2, 1, colour);
+        angle += steplen;
+    }
+
+    if (showcaplines) {
+        const pos0 = m.Vec2f{ .x = center.x, .y = center.y };
+        const pos1 = m.Vec2f{
+            .x = center.x + @sin(m.deg2radf(angle)) * iradius,
+            .y = center.y + @cos(m.deg2radf(angle)) * iradius,
+        };
+
+        try drawLine(pos0, pos1, 1, colour);
     }
 }
 

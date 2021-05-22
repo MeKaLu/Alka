@@ -21,8 +21,14 @@ fn draw() !void {
     // position, radius, colour
     // segment count is 16 by default
     //try alka.drawCircleLines(m.Vec2f{ .x = 350, .y = 260 }, 24, col);
-    // position, radius, segment count, colour
-    try alka.drawCircleLinesV(m.Vec2f{ .x = 350, .y = 260 }, 24, 32, col);
+    //try alka.drawCircle(m.Vec2f{ .x = 450, .y = 260 }, 24, col);
+    // position, radius, segment count, startangle, endangle, colour
+    try alka.drawCircleLinesV(m.Vec2f{ .x = 350, .y = 260 }, 24, 8, 0, 360, col);
+
+    try alka.drawCircleLinesV(m.Vec2f{ .x = 350, .y = 360 }, 24, 32, 0, 360, col);
+
+    try alka.drawCircleV(m.Vec2f{ .x = 450, .y = 260 }, 24, 32, 0, 360, col);
+    try alka.drawCircleV(m.Vec2f{ .x = 450, .y = 360 }, 24, 8, 0, 360, col);
 
     // start, end, thickness, colour
     try alka.drawLine(m.Vec2f{ .x = 300, .y = 300 }, m.Vec2f{ .x = 400, .y = 350 }, 1, col);

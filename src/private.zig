@@ -415,7 +415,7 @@ pub fn destroyPrivateBatch(i: usize) void {
 pub fn drawPrivateBatch(i: usize) Error!void {
     var b = &p.batchs[i];
 
-    try b.drawfun(b.data, b.mode, &b.shader, &b.texture, &b.cam2d);
+    return b.drawfun(b.data, b.mode, &b.shader, &b.texture, &b.cam2d);
 }
 
 pub fn renderPrivateBatch(i: usize) Error!void {
@@ -441,6 +441,8 @@ pub fn closeCallback(handle: ?*glfw.Window) void {
 pub fn resizeCallback(handle: ?*glfw.Window, w: i32, h: i32) void {
     //gl.viewport(0, 0, w, h);
     //gl.ortho(0, @intToFloat(f32, p.win.size.width), @intToFloat(f32, p.win.size.height), 0, -1, 1);
+    p.win.size.width = w;
+    p.win.size.height = h;
     if (p.callbacks.resize) |fun| {
         fun(w, h);
     }
