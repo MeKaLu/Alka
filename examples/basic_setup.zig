@@ -6,8 +6,8 @@ usingnamespace alka.log;
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;
 
-const virtualwidth: i32 = 1280;
-const virtualheight: i32 = 720;
+const virtualwidth: i32 = 1024;
+const virtualheight: i32 = 768;
 
 fn update(dt: f32) !void {
     mlog.notice("update", .{});

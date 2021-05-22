@@ -229,6 +229,8 @@ const Canvas = struct {
         }
         const cam = alka.getCamera2D();
         const mpos = alka.getMousePosition();
+        //const mpos = cam.worldToScreen(alka.getMousePosition());
+        //alog.debug("mpos: {d:.0}:{d:.0}", .{ mpos.x, mpos.y });
 
         var it = self.elements.iterator();
         while (it.next()) |entry| {
@@ -242,18 +244,15 @@ const Canvas = struct {
 
                 if (element.events.update) |fun| try fun(element, dt);
 
-                const pos = cam.worldToScreen(element.transform.getOriginated());
-                const mrpos = blk: {
-                    var mp = m.Vec2f.sub(mpos, pos);
-                    if (mp.x < 0) mp.x = 0;
-                    if (mp.y < 0) mp.y = 0;
-                    break :blk mp;
-                };
+                const tr = element.transform;
 
+                const pos = cam.worldToScreen(tr.getOriginated());
+                const size = cam.worldToScreen(tr.size);
+                //alog.debug("pos: {d:.0}:{d:.0}", .{ pos.x, pos.y });
                 const aabb = blk: {
                     const rect = m.Rectangle{
                         .position = pos,
-                        .size = element.transform.size,
+                        .size = size,
                     };
                     const res = rect.aabb(
                         m.Rectangle{
@@ -262,6 +261,13 @@ const Canvas = struct {
                         },
                     );
                     break :blk res;
+                };
+
+                const mrpos = blk: {
+                    var mp = m.Vec2f.sub(mpos, pos);
+                    if (mp.x < 0) mp.x = 0;
+                    if (mp.y < 0) mp.y = 0;
+                    break :blk mp;
                 };
 
                 switch (element.events.state) {

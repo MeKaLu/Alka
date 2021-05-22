@@ -9,8 +9,8 @@ usingnamespace alka.log;
 pub const mlog = std.log.scoped(.app);
 pub const log_level: std.log.Level = .info;
 
-var virtualwidth: i32 = 1280;
-var virtualheight: i32 = 720;
+const virtualwidth: i32 = 1024;
+const virtualheight: i32 = 768;
 
 var vel: f32 = 0;
 var dir: f32 = 1;

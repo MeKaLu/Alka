@@ -7,10 +7,10 @@ const m = alka.math;
 usingnamespace alka.log;
 
 pub const mlog = std.log.scoped(.app);
-pub const log_level: std.log.Level = .info;
+pub const log_level: std.log.Level = .debug;
 
-var virtualwidth: i32 = 1280;
-var virtualheight: i32 = 720;
+var virtualwidth: i32 = 1024;
+var virtualheight: i32 = 768;
 
 var vel: f32 = 0;
 var dir: f32 = 1;
@@ -112,7 +112,7 @@ pub fn main() !void {
     };
 
     try alka.init(&gpa.allocator, callbacks, 1024, 768, "main", 0, true);
-    alka.autoResize(virtualwidth, virtualheight, 1024, 768);
+    alka.autoResize(1024, 768, 1024, 768);
 
     var inp = alka.getInput();
     try inp.bindMouse(.ButtonLeft);
