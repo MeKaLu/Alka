@@ -200,9 +200,7 @@ pub const Info = struct {
         while (i < max_key_count) : (i += 1) {
             if (i < max_mouse_count) {
                 var l = &self.mouse_list[i];
-                if (l.mouse == Mouse.Invalid) {
-                    continue;
-                } else if (l.status == State.released) {
+                if (l.status == State.released) {
                     l.status = State.none;
                 } else if (l.status == State.pressed) {
                     l.status = State.down;
