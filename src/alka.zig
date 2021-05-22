@@ -386,6 +386,35 @@ pub fn setBackgroundColour(r: f32, g: f32, b: f32) void {
     gl.clearColour(r, g, b, 1);
 }
 
+/// Automatically resizes/strecthes the view/camera
+/// Recommended to use after initializing the engine and `resize` callback
+pub fn autoResize(virtualwidth: i32, virtualheight: i32, screenwidth: i32, screenheight: i32) void {
+    var cam = getCamera2D();
+
+    const aspect: f32 = @intToFloat(f32, virtualwidth) / @intToFloat(f32, virtualheight);
+    var width = screenwidth;
+    var height = @floatToInt(i32, @intToFloat(f32, screenheight) / aspect + 0.5);
+
+    if (height > screenheight) {
+        height = screenheight;
+
+        width = @floatToInt(i32, @intToFloat(f32, screenheight) * aspect + 0.5);
+    }
+
+    const vx = @divTrunc(screenwidth, 2) - @divTrunc(width, 2);
+    const vy = @divTrunc(screenheight, 2) - @divTrunc(height, 2);
+
+    const scalex = @intToFloat(f32, screenwidth) / @intToFloat(f32, virtualwidth);
+    const scaley = @intToFloat(f32, screenheight) / @intToFloat(f32, virtualheight);
+
+    gl.viewport(vx, vy, width, height);
+    gl.ortho(0, @intToFloat(f32, screenwidth), @intToFloat(f32, screenheight), 0, -1, 1);
+
+    cam.ortho = m.Mat4x4f.ortho(0, @intToFloat(f32, screenwidth), @intToFloat(f32, screenheight), 0, -1, 1);
+    cam.zoom.x = scalex;
+    cam.zoom.y = scaley;
+}
+
 /// Renders the given batch 
 pub fn renderBatch(batch: Batch) Error!void {
     const i = @intCast(usize, batch.id);
