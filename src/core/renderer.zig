@@ -93,14 +93,14 @@ pub fn VertexGeneric(istextcoord: bool, comptime positiontype: type) type {
             return struct {
                 const Self = @This();
                 position: positiontype = positiontype{},
-                colour: Colour = comptime Colour.rgba(255, 255, 255, 255)
+                colour: Colour = Colour{},
             };
         }
         return struct {
             const Self = @This();
             position: positiontype = positiontype{},
             texcoord: m.Vec2f = m.Vec2f{},
-            colour: Colour = comptime Colour.rgba(255, 255, 255, 255)
+            colour: Colour = Colour{},
         };
     }
     @compileError("Unknown position type");

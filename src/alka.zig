@@ -756,43 +756,17 @@ pub fn drawRectangle(rect: m.Rectangle, colour: Colour) Error!void {
 }
 
 /// Draws a basic rectangle lines
-/// Draw mode: lineloop
+/// Draw mode: lines
 pub fn drawRectangleLines(rect: m.Rectangle, colour: Colour) Error!void {
-    var i: usize = 0;
-    if (p.force_batch) |id| {
-        i = id;
-    } else {
-        const batch = getBatch(gl.DrawMode.lineloop, pr.embed.default_shader, pr.embed.white_texture_id) catch |err| {
-            if (err == Error.InvalidBatch) {
-                _ = try createBatch(gl.DrawMode.lineloop, pr.embed.default_shader, pr.embed.white_texture_id);
-                return drawRectangleLines(rect, colour);
-            } else return err;
-        };
-
-        i = @intCast(usize, batch.id);
-    }
-
     const pos0 = m.Vec2f{ .x = rect.position.x, .y = rect.position.y };
     const pos1 = m.Vec2f{ .x = rect.position.x + rect.size.x, .y = rect.position.y };
     const pos2 = m.Vec2f{ .x = rect.position.x + rect.size.x, .y = rect.position.y + rect.size.y };
     const pos3 = m.Vec2f{ .x = rect.position.x, .y = rect.position.y + rect.size.y };
 
-    const vx = [Batch2DQuad.max_vertex_count]Vertex2D{
-        .{ .position = pos0, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
-        .{ .position = pos1, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
-        .{ .position = pos2, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
-        .{ .position = pos3, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
-    };
-
-    p.batchs[i].data.submitDrawable(vx) catch |err| {
-        if (err == Error.ObjectOverflow) {
-            try pr.drawPrivateBatch(i);
-            try pr.cleanPrivateBatch(i);
-            //alog.notice("batch(id: {}) flushed!", .{i});
-
-            return p.batchs[i].data.submitDrawable(vx);
-        } else return err;
-    };
+    try drawLine(pos0, pos1, 1, colour);
+    try drawLine(pos1, pos2, 1, colour);
+    try drawLine(pos2, pos3, 1, colour);
+    try drawLine(pos0, pos3, 1, colour);
 }
 
 /// Draws a rectangle, angle should be in radians
@@ -848,22 +822,8 @@ pub fn drawRectangleAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: 
 }
 
 /// Draws a rectangle line, angle should be in radians
-/// Draw mode: lineloop
+/// Draw mode: lines
 pub fn drawRectangleLinesAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: Colour) Error!void {
-    var i: usize = 0;
-    if (p.force_batch) |id| {
-        i = id;
-    } else {
-        const batch = getBatch(gl.DrawMode.lineloop, pr.embed.default_shader.id, pr.embed.white_texture_id) catch |err| {
-            if (err == Error.InvalidBatch) {
-                _ = try createBatch(gl.DrawMode.lineloop, pr.embed.default_shader.id, pr.embed.white_texture_id);
-                return drawRectangleLinesAdv(rect, origin, angle, colour);
-            } else return err;
-        };
-
-        i = @intCast(usize, batch.id);
-    }
-
     var model = m.ModelMatrix{};
     model.translate(rect.position.x, rect.position.y, 0);
     model.translate(origin.x, origin.y, 0);
@@ -881,22 +841,10 @@ pub fn drawRectangleLinesAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, col
     const pos2 = m.Vec2f{ .x = rect.position.x + r2.x, .y = rect.position.y + r2.y };
     const pos3 = m.Vec2f{ .x = rect.position.x + r3.x, .y = rect.position.y + r3.y };
 
-    const vx = [Batch2DQuad.max_vertex_count]Vertex2D{
-        .{ .position = pos0, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
-        .{ .position = pos1, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
-        .{ .position = pos2, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
-        .{ .position = pos3, .texcoord = m.Vec2f{ .x = 0, .y = 0 }, .colour = colour },
-    };
-
-    p.batchs[i].data.submitDrawable(vx) catch |err| {
-        if (err == Error.ObjectOverflow) {
-            try pr.drawPrivateBatch(i);
-            try pr.cleanPrivateBatch(i);
-            //alog.notice("batch(id: {}) flushed!", .{i});
-
-            return p.batchs[i].data.submitDrawable(vx);
-        } else return err;
-    };
+    try drawLine(pos0, pos1, 1, colour);
+    try drawLine(pos1, pos2, 1, colour);
+    try drawLine(pos2, pos3, 1, colour);
+    try drawLine(pos0, pos3, 1, colour);
 }
 
 /// Draws a texture

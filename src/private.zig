@@ -421,7 +421,7 @@ pub fn drawPrivateBatch(i: usize) Error!void {
 pub fn renderPrivateBatch(i: usize) Error!void {
     if (p.batchs[i].state == PrivateBatchState.active) {
         try drawPrivateBatch(i);
-    } else alog.warn("batch(id: {}) <render> operation cannot be done, state: {}", .{ i, p.batchs[i].state });
+    } else alog.debug("batch(id: {}) <render> operation cannot be done, state: {}", .{ i, p.batchs[i].state });
 }
 
 pub fn cleanPrivateBatch(i: usize) Error!void {

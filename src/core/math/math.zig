@@ -120,43 +120,27 @@ pub const Transform2D = struct {
     /// AABB collision detection
     /// between to transform(rotation does not count)
     pub fn aabb(self: Transform2D, other: Transform2D) bool {
-        const r0 = Rectangle{
-            .position = self.getOriginated(),
-            .size = self.size,
-        };
-        const r1 = Rectangle{
-            .position = other.getOriginated(),
-            .size = other.size,
-        };
-        return Rectangle.aabb(r0, r1);
+        return self.getRectangle().aabb(other.getRectangle());
     }
 
     /// AABB collision detection
     /// between to transform(rotation does not count)
     /// origin does not count  
     pub fn aabbNoOrigin(self: Transform2D, other: Transform2D) bool {
-        return Rectangle.aabb(self.getRectangle(), other.getRectangle());
+        return Rectangle.aabb(self.getRectangleNoOrigin(), other.getRectangleNoOrigin());
     }
 
     /// AABB collision detection
     /// between to transform(rotation does not count)
     pub fn aabbMeeting(self: Transform2D, other: Transform2D, meeting: Vec2f) bool {
-        const r0 = Rectangle{
-            .position = self.getOriginated(),
-            .size = self.size,
-        };
-        const r1 = Rectangle{
-            .position = other.getOriginated(),
-            .size = other.size,
-        };
-        return Rectangle.aabbMeeting(r0, r1, meeting);
+        return self.getRectangle().aabbMeeting(other.getRectangle(), meeting);
     }
 
     /// AABB collision detection
     /// between to transform(rotation does not count)
     /// origin does not count  
     pub fn aabbMeetingNoOrigin(self: Transform2D, other: Transform2D, meeting: Vec2f) bool {
-        return Rectangle.aabbMeeting(self.getRectangle(), other.getRectangle(), meeting);
+        return Rectangle.aabbMeeting(self.getRectangleNoOrigin(), other.getRectangleNoOrigin(), meeting);
     }
 };
 
