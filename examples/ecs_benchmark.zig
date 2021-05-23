@@ -117,16 +117,6 @@ fn draw() !void {
     mlog.info("{s}", .{debug});
 }
 
-fn close() void {
-    var i: u64 = 0;
-    while (i < maxent) : (i += 1) {
-        const reg = world.getRegister(i) catch continue;
-        reg.destroy();
-        world.removeRegister(i) catch continue;
-        //mlog.info("destroyed {}", .{i});
-    }
-}
-
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{
         .enable_memory_limit = false,
@@ -137,8 +127,6 @@ pub fn main() !void {
         .update = update,
         .fixed = fupdate,
         .draw = draw,
-        .resize = null,
-        .close = close,
     };
 
     try alka.init(&gpa.allocator, callbacks, 1024, 768, "ECS Benchmark", 1000, false);

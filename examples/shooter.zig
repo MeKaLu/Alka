@@ -695,14 +695,6 @@ fn resize(w: i32, h: i32) void {
 }
 
 fn close() void {
-    var i: u64 = 0;
-    while (i < max_ent) : (i += 1) {
-        const reg = world.getRegister(i) catch continue;
-        reg.destroy();
-        world.removeRegister(i) catch continue;
-        mlog.debug("entity destroyed id: {}", .{reg.id});
-    }
-
     s_ent.deinit();
     world.deinit();
 }

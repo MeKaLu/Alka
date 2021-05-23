@@ -436,6 +436,7 @@ pub fn closeCallback(handle: ?*glfw.Window) void {
     if (p.callbacks.close) |fun| {
         fun();
     }
+    p.callbacks.close = null;
 }
 
 pub fn resizeCallback(handle: ?*glfw.Window, w: i32, h: i32) void {

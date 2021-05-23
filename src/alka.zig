@@ -229,6 +229,8 @@ pub fn update() !void {
 
         p.fps = p.fps.calculate(p.frametime);
     }
+    if (p.win.callbacks.close != null)
+        pr.closeCallback(p.win.handle);
 }
 
 /// Returns the p.alloc
