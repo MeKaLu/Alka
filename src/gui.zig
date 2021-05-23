@@ -115,7 +115,7 @@ const Canvas = struct {
     elements: UniqueList(CElement) = undefined,
 
     fn calculateElementTransform(canvas: m.Transform2D, tr: m.Transform2D) m.Transform2D {
-        const newpos = m.Vec2f.sub(canvas.position.add(tr.position.sub(tr.origin)), canvas.origin);
+        const newpos = canvas.getOriginated().add(tr.getOriginated());
         const newsize = tr.size;
         const newrot: f32 = canvas.rotation + tr.rotation;
 
@@ -239,10 +239,10 @@ const Canvas = struct {
                 // so we need '- 1' to get the current entry
                 var celement = &self.elements.items[it.index - 1].data.?;
                 var element = &celement.element;
+                if (element.events.update) |fun| try fun(element, dt);
+
                 element.transform = calculateElementTransform(self.transform, celement.original_transform);
                 if (!self.isInside(element.transform)) continue;
-
-                if (element.events.update) |fun| try fun(element, dt);
 
                 const tr = element.transform;
 
@@ -257,7 +257,7 @@ const Canvas = struct {
                     const res = rect.aabb(
                         m.Rectangle{
                             .position = mpos,
-                            .size = m.Vec2f{ .x = 1, .y = 1 },
+                            .size = m.Vec2f{ .x = 2, .y = 2 },
                         },
                     );
                     break :blk res;
@@ -333,10 +333,10 @@ const Canvas = struct {
                 // so we need '- 1' to get the current entry
                 var celement = &self.elements.items[it.index - 1].data.?;
                 var element = &celement.element;
+                if (element.events.fixed) |fun| try fun(element, dt);
+
                 element.transform = calculateElementTransform(self.transform, celement.original_transform);
                 if (!self.isInside(element.transform)) continue;
-
-                if (element.events.fixed) |fun| try fun(element, dt);
             }
         }
     }

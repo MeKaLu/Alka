@@ -327,7 +327,13 @@ pub fn World(comptime Storage: type) type {
         }
 
         /// Deinitializes the world
-        pub fn deinit(self: _World) void {
+        pub fn deinit(self: *_World) void {
+            var it = self.registers.iterator();
+            while (it.next()) |entry| {
+                if (entry.data) |entity|
+                    entity.destroy();
+            }
+
             self.registers.deinit();
             inline for (TNames) |name| {
                 @field(self.entries, name).deinit();
