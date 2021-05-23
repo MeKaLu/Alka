@@ -108,7 +108,7 @@ pub fn setup(b: *Builder, target: Zig.CrossTarget, comptime gamename: []const u8
             exe.linkSystemLibrary("gdi32");
             exe.linkSystemLibrary("opengl32");
 
-            exe.subsystem = Builtin.SubSystem.Console;
+            exe.subsystem = .Console;
 
             compileGLFWWin32(exe, enginepath);
         },
@@ -145,7 +145,7 @@ pub fn setupWithStatic(b: *Builder, target: Zig.CrossTarget, gamename: []const u
             exe.linkSystemLibrary("gdi32");
             exe.linkSystemLibrary("opengl32");
 
-            exe.subsystem = Builtin.SubSystem.Console;
+            exe.subsystem = .Console;
 
             compileGLFWWin32(exe, enginepath);
         },
