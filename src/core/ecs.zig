@@ -103,7 +103,8 @@ pub fn World(comptime Storage: type) type {
                     const typ = @TypeOf(@field(self.world.entries, tname));
 
                     if (std.mem.eql(u8, typ.Name, name)) {
-                        return @field(self.world.entries, tname).remove(self.id);
+                        if (!@field(self.world.entries, tname).remove(self.id)) return Error.InvalidComponent;
+                        return;
                     }
                 }
                 return Error.InvalidComponent;
@@ -148,7 +149,8 @@ pub fn World(comptime Storage: type) type {
                         if (std.mem.eql(u8, data.name, name)) {
                             if (data.ptr) |ptr| {
                                 try self.removeStorage(name);
-                                return self.attached.remove(data.id);
+                                if (!self.attached.remove(data.id)) return Error.InvalidComponent;
+                                return;
                             }
                         }
                     }

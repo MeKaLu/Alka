@@ -80,6 +80,11 @@ pub fn Generic(comptime T: type) type {
                     return result;
                 }
 
+                /// Calculate angle from two Vector2s in X-axis in radians
+                pub fn angleRad(v1: Self, v2: Self) T {
+                    return atan2(T, v2.y - v1.y, v2.x - v1.x);
+                }
+
                 /// Calculate the toward position
                 pub fn moveTowards(v1: Self, v2: Self, speed: Self) Self {
                     const ang: T = atan2(T, v2.y - v1.y, v2.x - v1.x);
