@@ -37,10 +37,6 @@ const fragment_shader =
     \\}
 ;
 
-fn shaderGetMVP(sh: *u32) i32 {
-    return alka.gl.shaderProgramGetUniformLocation(sh.*, "view");
-}
-
 fn draw() !void {
     // push the shader
     // id
