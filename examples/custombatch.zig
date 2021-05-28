@@ -88,14 +88,14 @@ fn draw() !void {
     // cleanBatch(batch: Batch) Error!void
 
     // push the batch
-    alka.pushBatch(batch);
+    try alka.pushBatch(batch);
     {
         const r = m.Rectangle{ .position = m.Vec2f{ .x = 100.0, .y = 200.0 }, .size = m.Vec2f{ .x = 50.0, .y = 50.0 } };
         const col = alka.Colour{ .r = 1, .g = 1, .b = 1, .a = 1 };
-        //try alka.drawRectangleAdv(r, m.Vec2f{ .x = 25, .y = 25 }, m.deg2radf(45), col);
+        try alka.drawRectangleAdv(r, m.Vec2f{ .x = 25, .y = 25 }, m.deg2radf(45), col);
 
-        // custom batch forces to use drawmode: triangles, so it'll be filled rectangle
-        try alka.drawRectangleLinesAdv(r, m.Vec2f{ .x = 25, .y = 25 }, m.deg2radf(45), col);
+        // custom batch forces to use drawmode: triangles, so it'll be corrupted rectangle
+        //try alka.drawRectangleLinesAdv(r, m.Vec2f{ .x = 25, .y = 25 }, m.deg2radf(45), col);
 
         // there is also a 2dcamera in unique to every batch,
         // the alka.getCamera2D() is the global camera which every batch defaults for, every frame

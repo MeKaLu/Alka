@@ -84,6 +84,13 @@ pub fn build(b: *Builder) void {
         }
 
         {
+            const exe = lib.setupWithStatic(b, target, "customshaders", "examples/customshaders.zig", "./");
+            exe.setOutputDir("build");
+            exe.setBuildMode(mode);
+            exe.install();
+        }
+
+        {
             const exe = lib.setupWithStatic(b, target, "shooter", "examples/shooter.zig", "./");
             exe.setOutputDir("build");
             exe.setBuildMode(mode);

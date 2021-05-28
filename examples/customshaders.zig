@@ -1,5 +1,5 @@
 const std = @import("std");
-const alka = @import("alka.zig");
+const alka = @import("alka");
 
 const m = alka.math;
 usingnamespace alka.log;
@@ -15,10 +15,10 @@ const vertex_shader =
     \\
     \\out vec2 ourTexCoord;
     \\out vec4 ourColour;
-    \\uniform mat4 MVP;
+    \\uniform mat4 view;
     \\
     \\void main() {
-    \\  gl_Position = MVP * vec4(aPos.xy, 0.0, 1.0);
+    \\  gl_Position = view * vec4(aPos.xy, 0.0, 1.0);
     \\  ourTexCoord = aTexCoord;
     \\  ourColour = aColour;
     \\}
@@ -36,6 +36,10 @@ const fragment_shader =
     \\  final = vec4(1, 0, 0, 1) * texelColour; // everything is red
     \\}
 ;
+
+fn shaderGetMVP(sh: *u32) i32 {
+    return alka.gl.shaderProgramGetUniformLocation(sh.*, "view");
+}
 
 fn draw() !void {
     // push the shader

@@ -429,9 +429,22 @@ pub fn cleanPrivateBatch(batch: Batch) Error!void {
     return pr.cleanPrivateBatch(i);
 }
 
+/// Forces to use the given shader
+/// in draw calls
+pub fn pushShader(sh: u64) Error!void {
+    if (p.force_batch != null) return Error.CustomBatchInUse;
+    p.force_shader = sh;
+}
+
+/// Pops the force use shader 
+pub fn popShader() void {
+    p.force_shader = null;
+}
+
 /// Forces to use the given batch
 /// in draw calls
-pub fn pushBatch(batch: Batch) void {
+pub fn pushBatch(batch: Batch) Error!void {
+    if (p.force_shader != null) return Error.CustomShaderInUse;
     p.force_batch = @intCast(usize, batch.id);
 }
 
@@ -447,9 +460,13 @@ pub fn drawPixel(pos: m.Vec2f, colour: Colour) Error!void {
     if (p.force_batch) |id| {
         i = id;
     } else {
-        const batch = getBatch(gl.DrawMode.points, pr.embed.default_shader.id, pr.embed.white_texture_id) catch |err| {
+        var shader: u64 = pr.embed.default_shader.id;
+        if (p.force_shader) |shaa| {
+            shader = shaa;
+        }
+        const batch = getBatch(gl.DrawMode.points, shader, pr.embed.white_texture_id) catch |err| {
             if (err == Error.InvalidBatch) {
-                _ = try createBatch(gl.DrawMode.points, pr.embed.default_shader.id, pr.embed.white_texture_id);
+                _ = try createBatch(gl.DrawMode.points, shader, pr.embed.white_texture_id);
                 return drawPixel(pos, colour);
             } else return err;
         };
@@ -482,9 +499,13 @@ pub fn drawLine(start: m.Vec2f, end: m.Vec2f, thickness: f32, colour: Colour) Er
     if (p.force_batch) |id| {
         i = id;
     } else {
-        const batch = getBatch(gl.DrawMode.lines, pr.embed.default_shader.id, pr.embed.white_texture_id) catch |err| {
+        var shader: u64 = pr.embed.default_shader.id;
+        if (p.force_shader) |shaa| {
+            shader = shaa;
+        }
+        const batch = getBatch(gl.DrawMode.lines, shader, pr.embed.white_texture_id) catch |err| {
             if (err == Error.InvalidBatch) {
-                _ = try createBatch(gl.DrawMode.lines, pr.embed.default_shader.id, pr.embed.white_texture_id);
+                _ = try createBatch(gl.DrawMode.lines, shader, pr.embed.white_texture_id);
                 return drawLine(start, end, thickness, colour);
             } else return err;
         };
@@ -529,9 +550,13 @@ pub fn drawCircleV(center: m.Vec2f, radius: f32, segments: i32, startangle: i32,
     if (p.force_batch) |id| {
         batch_id = id;
     } else {
-        const batch = getBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, pr.embed.white_texture_id) catch |err| {
+        var shader: u64 = pr.embed.default_shader.id;
+        if (p.force_shader) |shaa| {
+            shader = shaa;
+        }
+        const batch = getBatch(gl.DrawMode.triangles, shader, pr.embed.white_texture_id) catch |err| {
             if (err == Error.InvalidBatch) {
-                _ = try createBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, pr.embed.white_texture_id);
+                _ = try createBatch(gl.DrawMode.triangles, shader, pr.embed.white_texture_id);
                 return drawCircleV(center, radius, segments, startangle, endangle, colour);
             } else return err;
         };
@@ -722,9 +747,13 @@ pub fn drawRectangle(rect: m.Rectangle, colour: Colour) Error!void {
     if (p.force_batch) |id| {
         i = id;
     } else {
-        const batch = getBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, pr.embed.white_texture_id) catch |err| {
+        var shader: u64 = pr.embed.default_shader.id;
+        if (p.force_shader) |shaa| {
+            shader = shaa;
+        }
+        const batch = getBatch(gl.DrawMode.triangles, shader, pr.embed.white_texture_id) catch |err| {
             if (err == Error.InvalidBatch) {
-                _ = try createBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, pr.embed.white_texture_id);
+                _ = try createBatch(gl.DrawMode.triangles, shader, pr.embed.white_texture_id);
                 return drawRectangle(rect, colour);
             } else return err;
         };
@@ -776,9 +805,13 @@ pub fn drawRectangleAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: 
     if (p.force_batch) |id| {
         i = id;
     } else {
-        const batch = getBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, pr.embed.white_texture_id) catch |err| {
+        var shader: u64 = pr.embed.default_shader.id;
+        if (p.force_shader) |shaa| {
+            shader = shaa;
+        }
+        const batch = getBatch(gl.DrawMode.triangles, shader, pr.embed.white_texture_id) catch |err| {
             if (err == Error.InvalidBatch) {
-                _ = try createBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, pr.embed.white_texture_id);
+                _ = try createBatch(gl.DrawMode.triangles, shader, pr.embed.white_texture_id);
                 return drawRectangleAdv(rect, origin, angle, colour);
             } else return err;
         };
@@ -854,9 +887,13 @@ pub fn drawTexture(texture_id: u64, rect: m.Rectangle, srect: m.Rectangle, colou
     if (p.force_batch) |id| {
         i = id;
     } else {
-        const batch = getBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, texture_id) catch |err| {
+        var shader: u64 = pr.embed.default_shader.id;
+        if (p.force_shader) |shaa| {
+            shader = shaa;
+        }
+        const batch = getBatch(gl.DrawMode.triangles, shader, texture_id) catch |err| {
             if (err == Error.InvalidBatch) {
-                _ = try createBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, texture_id);
+                _ = try createBatch(gl.DrawMode.triangles, shader, texture_id);
                 return drawTexture(texture_id, rect, srect, colour);
             } else return err;
         };
@@ -879,9 +916,13 @@ pub fn drawTextureAdv(texture_id: u64, rect: m.Rectangle, srect: m.Rectangle, or
     if (p.force_batch) |id| {
         i = id;
     } else {
-        const batch = getBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, texture_id) catch |err| {
+        var shader: u64 = pr.embed.default_shader.id;
+        if (p.force_shader) |shaa| {
+            shader = shaa;
+        }
+        const batch = getBatch(gl.DrawMode.triangles, shader, texture_id) catch |err| {
             if (err == Error.InvalidBatch) {
-                _ = try createBatch(gl.DrawMode.triangles, pr.embed.default_shader.id, texture_id);
+                _ = try createBatch(gl.DrawMode.triangles, shader, texture_id);
                 return drawTextureAdv(texture_id, rect, srect, origin, angle, colour);
             } else return err;
         };
@@ -916,12 +957,16 @@ pub fn drawTextPoint(font_id: u64, codepoint: i32, position: m.Vec2f, psize: f32
     if (p.force_batch) |id| {
         i = id;
     } else {
-        const shader = try p.assetmanager.getShader(pr.embed.default_shader.id);
+        var shader: u64 = pr.embed.default_shader.id;
+        if (p.force_shader) |shaa| {
+            shader = shaa;
+        }
+        const sh = try p.assetmanager.getShader(shader);
         const font = try p.assetmanager.getFont(font_id);
 
-        const batch = getBatchNoID(gl.DrawMode.triangles, shader, font.texture) catch |err| {
+        const batch = getBatchNoID(gl.DrawMode.triangles, sh, font.texture) catch |err| {
             if (err == Error.InvalidBatch) {
-                _ = try createBatchNoID(gl.DrawMode.triangles, shader, font.texture);
+                _ = try createBatchNoID(gl.DrawMode.triangles, sh, font.texture);
                 return drawTextPoint(font_id, codepoint, position, psize, colour);
             } else return err;
         };

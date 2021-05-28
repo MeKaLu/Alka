@@ -46,7 +46,7 @@ pub const embed = struct {
 const perror = error{ InvalidBatch, InvalidMVP, EngineIsInitialized, EngineIsNotInitialized, FailedToFindPrivateBatch };
 const asseterror = error{ AssetAlreadyExists, FailedToAllocate, InvalidAssetID };
 /// Error set
-pub const Error = error{FailedToFindBatch} || perror || asseterror || core.Error;
+pub const Error = error{ FailedToFindBatch, CustomBatchInUse, CustomShaderInUse } || perror || asseterror || core.Error;
 
 pub const max_quad = 1024 * 8;
 pub const Vertex2D = comptime renderer.VertexGeneric(true, m.Vec2f);
@@ -345,8 +345,8 @@ pub const Private = struct {
     };
 
     defaults: Temp = undefined,
-    current: Temp = undefined,
 
+    force_shader: ?u64 = null,
     force_batch: ?usize = null,
     batch_counter: usize = 0,
     batchs: []PrivateBatch = undefined,
