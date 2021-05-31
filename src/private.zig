@@ -380,9 +380,23 @@ pub fn createPrivateBatch() Error!void {
         p.batchs = try p.alloc.alloc(PrivateBatch, 1);
         p.batch_counter += 1;
     } else {
-        i = p.batch_counter;
-        p.batchs = try p.alloc.realloc(p.batchs, p.batch_counter + 1);
-        p.batch_counter += 1;
+        i = blk: {
+            var j: usize = 0;
+            var didbreak = false;
+            while (j < p.batch_counter) : (j += 1) {
+                if (p.batchs[j].state == PrivateBatchState.empty) {
+                    didbreak = true;
+                    break;
+                }
+            }
+            if (!didbreak) {
+                // to be safe
+                j = p.batch_counter;
+                p.batchs = try p.alloc.realloc(p.batchs, p.batch_counter + 1);
+                p.batch_counter += 1;
+            }
+            break :blk j;
+        };
     }
 
     p.batchs[i].drawfun = Batch.drawDefault;
@@ -421,7 +435,7 @@ pub fn drawPrivateBatch(i: usize) Error!void {
 pub fn renderPrivateBatch(i: usize) Error!void {
     if (p.batchs[i].state == PrivateBatchState.active) {
         try drawPrivateBatch(i);
-    } else alog.debug("batch(id: {}) <render> operation cannot be done, state: {}", .{ i, p.batchs[i].state });
+    } else if (p.batchs[i].data.submission_counter > 0) alog.debug("batch(id: {}) <render> operation cannot be done, state: {}", .{ i, p.batchs[i].state });
 }
 
 pub fn cleanPrivateBatch(i: usize) Error!void {
