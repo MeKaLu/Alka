@@ -520,13 +520,13 @@ pub fn drawLine(start: m.Vec2f, end: m.Vec2f, thickness: f32, colour: Colour) Er
 /// Draws a circle lines, 16 segments by default
 /// Draw mode: triangles
 pub fn drawCircle(position: m.Vec2f, radius: f32, colour: Colour) Error!void {
-    return drawCircleV(position, radius, 0, 360, 16, colour);
+    return drawCircleAdv(position, radius, 0, 360, 16, colour);
 }
 
 // Source: https://github.com/raysan5/raylib/blob/f1ed8be5d7e2d966d577a3fd28e53447a398b3b6/src/shapes.c#L209
 /// Draws a circle
 /// Draw mode: triangles
-pub fn drawCircleV(center: m.Vec2f, radius: f32, segments: i32, startangle: i32, endangle: i32, colour: Colour) Error!void {
+pub fn drawCircleAdv(center: m.Vec2f, radius: f32, segments: i32, startangle: i32, endangle: i32, colour: Colour) Error!void {
     const batch_id = try identifyBatchID(.triangles, pr.embed.default_shader.id, pr.embed.white_texture_id);
 
     const SMOOTH_CIRCLE_ERROR_RATE = comptime 0.5;

@@ -27,8 +27,8 @@ fn draw() !void {
 
     try alka.drawCircleLinesV(m.Vec2f{ .x = 350, .y = 360 }, 24, 32, 0, 360, col);
 
-    try alka.drawCircleV(m.Vec2f{ .x = 450, .y = 260 }, 24, 32, 0, 360, col);
-    try alka.drawCircleV(m.Vec2f{ .x = 450, .y = 360 }, 24, 8, 0, 360, col);
+    try alka.drawCircleAdv(m.Vec2f{ .x = 450, .y = 260 }, 24, 32, 0, 360, col);
+    try alka.drawCircleAdv(m.Vec2f{ .x = 450, .y = 360 }, 24, 8, 0, 360, col);
 
     // start, end, thickness, colour
     try alka.drawLine(m.Vec2f{ .x = 300, .y = 300 }, m.Vec2f{ .x = 400, .y = 350 }, 1, col);
