@@ -206,23 +206,13 @@ pub fn update() !void {
         }
 
         // Render all the batches
-        {
-            var i: usize = 0;
-            while (i < p.batch_counter) : (i += 1) {
-                try pr.renderPrivateBatch(i);
-            }
-        }
+        try renderAllBatchs();
 
         try glfw.swapBuffers(p.win.handle);
         try glfw.pollEvents();
 
         // Clean all the batches
-        {
-            var i: usize = 0;
-            while (i < p.batch_counter) : (i += 1) {
-                try pr.cleanPrivateBatch(i);
-            }
-        }
+        try cleanAllBatchs();
 
         try p.frametime.stop();
         try p.frametime.sleep(p.targetfps);
@@ -427,6 +417,22 @@ pub fn renderBatch(batch: Batch) Error!void {
 pub fn cleanPrivateBatch(batch: Batch) Error!void {
     const i = @intCast(usize, batch.id);
     return pr.cleanPrivateBatch(i);
+}
+
+/// Renders all the batchs 
+pub fn renderAllBatchs() Error!void {
+    var i: usize = 0;
+    while (i < p.batch_counter) : (i += 1) {
+        try pr.renderPrivateBatch(i);
+    }
+}
+
+/// Cleans all the batchs 
+pub fn cleanAllBatchs() Error!void {
+    var i: usize = 0;
+    while (i < p.batch_counter) : (i += 1) {
+        try pr.cleanPrivateBatch(i);
+    }
 }
 
 /// Forces to use the given shader

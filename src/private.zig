@@ -517,7 +517,7 @@ pub fn submitTextureQuad(i: usize, p0: m.Vec2f, p1: m.Vec2f, p2: m.Vec2f, p3: m.
             try cleanPrivateBatch(i);
 
             try p.batchs[i].data.submitDrawable(vx);
-            alog.notice("batch(id: {}) flushed!", .{i});
+            //alog.notice("batch(id: {}) flushed!", .{i});
         } else return err;
     };
 }
