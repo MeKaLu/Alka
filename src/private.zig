@@ -344,8 +344,18 @@ pub const Private = struct {
         cam2d: m.Camera2D = undefined,
     };
 
-    defaults: Temp = undefined,
+    pub const Layer = struct {
+        defaults: Temp = undefined,
 
+        force_shader: ?u64 = null,
+        force_batch: ?usize = null,
+        batch_counter: usize = 0,
+        batchs: []PrivateBatch = undefined,
+    };
+
+    layers: utils.UniqueList(Layer) = undefined,
+
+    defaults: Temp = undefined,
     force_shader: ?u64 = null,
     force_batch: ?usize = null,
     batch_counter: usize = 0,
