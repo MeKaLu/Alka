@@ -1,0 +1,12 @@
+build
+zig-cache
+zig-out
+vscode
+build_runner.zig
+src/.vscode
+.ccls-cache/
+kiragine.log
+.vscode/settings.json
+actual-testbuf
+testbuf
+out.png
