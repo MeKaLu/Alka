@@ -7,7 +7,7 @@ pub fn build(b: *Builder) void {
 
     lib.strip = b.option(bool, "strip", "Strip the exe?") orelse false;
 
-    const exe = lib.setupWithStatic(b, target, "app", "src/main.zig", "../Alka/");
+    const exe = lib.setupWithStatic(b, target, "app", "src/main.zig", "../../");
     exe.setOutputDir("build");
     exe.setBuildMode(mode);
     exe.install();

@@ -313,7 +313,6 @@ pub fn draw() !void {
                 const tr = try entity.get("Transform", Transform2D);
                 const colour = try entity.get("Colour", alka.Colour);
 
-                // collision box
                 try alka.drawRectangleAdv(tr.getRectangleNoOrigin(), tr.origin, deg2radf(tr.rotation), colour);
             }
         }
@@ -367,7 +366,7 @@ pub fn draw() !void {
                 const texture = try asset.getTexture(texture_id);
 
                 // collision box
-                try alka.drawRectangleLines(tr.getRectangle(), colour);
+                //try alka.drawRectangleLines(tr.getRectangle(), colour);
 
                 try alka.drawTextureAdv(texture_id, tr.getRectangleNoOrigin(), Rectangle{
                     .size = Vec2f{
