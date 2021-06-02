@@ -19,18 +19,10 @@
 //3. This notice may not be removed or altered from any source
 //   distribution.
 
-pub const c = @import("c.zig");
-pub const gl = @import("gl.zig");
-pub const fs = @import("fs.zig");
-pub const utf8 = @import("utf8.zig");
-pub const utils = @import("utils.zig");
-pub const audio = @import("audio.zig");
-pub const ecs = @import("ecs.zig");
-pub const math = @import("math/math.zig");
-pub const glfw = @import("glfw.zig");
-pub const input = @import("input.zig");
-pub const log = @import("log.zig");
-pub const renderer = @import("renderer.zig");
-pub const window = @import("window.zig");
+const std = @import("std");
+const c = @import("c.zig");
 
-pub const Error = gl.Error || fs.Error || utils.Error || audio.Error || ecs.Error || glfw.GLFWError || input.Error || renderer.Error || window.Error;
+usingnamespace @import("log.zig");
+const aloga = std.log.scoped(.nil_core_audio);
+
+pub const Error = error{};

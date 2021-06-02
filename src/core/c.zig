@@ -25,4 +25,5 @@ pub usingnamespace @cImport({
     @cInclude("stb/image.h");
     @cInclude("stb/truetype.h");
     @cInclude("stb/rect_pack.h");
+    @cInclude("miniaudio.h");
 });

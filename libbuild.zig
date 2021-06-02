@@ -90,6 +90,7 @@ pub fn compileOneFile(exe: *Build.LibExeObjStep, comptime enginepath: []const u8
     exe.addCSourceFile(enginepath ++ "include/onefile/stb/image.c", &flags);
     exe.addCSourceFile(enginepath ++ "include/onefile/stb/rect_pack.c", &flags);
     exe.addCSourceFile(enginepath ++ "include/onefile/stb/truetype.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/onefile/miniaudio.c", &flags);
     exe.addCSourceFile(enginepath ++ "src/core/private.c", &flags);
 }
 
