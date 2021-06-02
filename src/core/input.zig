@@ -22,7 +22,6 @@
 const std = @import("std");
 const glfw = @import("glfw.zig");
 
-usingnamespace @import("log.zig");
 const alogi = std.log.scoped(.nil_core_input);
 
 /// Error set

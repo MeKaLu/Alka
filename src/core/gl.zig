@@ -23,8 +23,6 @@ const c = @import("c.zig");
 const m = @import("math/math.zig");
 const std = @import("std");
 
-usingnamespace @import("log.zig");
-
 const alogg = std.log.scoped(.nil_core_gl);
 
 /// Error set

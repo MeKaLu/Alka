@@ -31,7 +31,7 @@ pub const utf8 = @import("core/utf8.zig");
 /// utils library
 pub const utils = @import("core/utils.zig");
 /// audio library
-pub const audio = @import("core/audio.zig");
+pub const audio = @import("core/audio/audio.zig");
 /// ecs library
 pub const ecs = @import("core/ecs.zig");
 /// math library

@@ -31,7 +31,6 @@ extern fn alkaLoadIcon(window: ?*glfw.Window, path: [*c]const u8) callconv(.C) b
 
 pub const Error = error{FailedToLoadIcon} || glfw.GLFWError || fs.Error;
 
-usingnamespace @import("log.zig");
 const alogw = std.log.scoped(.alka_core_window);
 
 pub const FrameTime = struct {

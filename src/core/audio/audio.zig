@@ -20,9 +20,16 @@
 //   distribution.
 
 const std = @import("std");
-const c = @import("c.zig");
+const c = @import("../c.zig");
 
-usingnamespace @import("log.zig");
 const aloga = std.log.scoped(.nil_core_audio);
 
-pub const Error = error{};
+pub const Error = error{
+    FailedToInitializeDevice,
+};
+
+/// Initializes the audio devices
+pub fn initDevices() Error!void {}
+
+/// Denitializes the audio devices
+pub fn deinitDevices() void {}

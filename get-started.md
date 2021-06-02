@@ -15,7 +15,7 @@ pub fn build(b: *Builder) void {
   lib.strip = b.option(bool, "strip", "Strip the exe?") orelse false;
 
   // Note: the 'enginepath' should be a relative path!
-  const exe = lib.setupWithStatic(b, target, app_name, path_to_main_src, enginepath); 
+  const exe = lib.setup(b, target, app_name, path_to_main_src, enginepath); 
   exe.setOutputDir("build");
   exe.setBuildMode(mode);
   exe.install();

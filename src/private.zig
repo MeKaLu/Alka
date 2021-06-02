@@ -34,7 +34,6 @@ const utils = core.utils;
 pub const AssetManager = @import("assetmanager.zig").AssetManager;
 const asseterror = @import("assetmanager.zig").Error;
 
-usingnamespace core.log;
 const alog = std.log.scoped(.alka);
 
 pub const embed = struct {

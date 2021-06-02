@@ -25,7 +25,6 @@ const m = alka.math;
 const utils = @import("core/utils.zig");
 const UniqueList = utils.UniqueList;
 
-usingnamespace @import("core/log.zig");
 const alog = std.log.scoped(.alka_gui);
 
 /// Error Set

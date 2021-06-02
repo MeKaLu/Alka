@@ -24,7 +24,6 @@ const core = @import("core/core.zig");
 const renderer = core.renderer;
 const gl = core.gl;
 
-usingnamespace core.log;
 const alog = std.log.scoped(.alka);
 
 pub const Error = error{ AssetAlreadyExists, FailedToAllocate, InvalidAssetID } || core.Error;

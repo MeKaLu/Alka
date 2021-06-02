@@ -26,7 +26,6 @@ const gl = @import("gl.zig");
 const fs = @import("fs.zig");
 const m = @import("math/math.zig");
 const utf8 = @import("utf8.zig");
-usingnamespace @import("log.zig");
 
 const alog = std.log.scoped(.alka_core_renderer);
 
