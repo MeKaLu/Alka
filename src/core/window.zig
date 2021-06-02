@@ -27,6 +27,8 @@ const time = @import("std").time;
 const fs = @import("fs.zig");
 const c = @import("c.zig");
 
+extern fn alkaLoadIcon(window: ?*glfw.Window, path: [*c]const u8) callconv(.C) bool;
+
 pub const Error = error{FailedToLoadIcon} || glfw.GLFWError || fs.Error;
 
 usingnamespace @import("log.zig");
@@ -175,6 +177,8 @@ pub const Info = struct {
     pub fn setIcon(win: *Info, alloc: *std.mem.Allocator, path: []const u8) Error!void {
         if (win.handle == null)
             alogw.crit("handle has to be valid when setting the icon of the window! Continuing execution.", .{});
+
+        //if (alkaLoadIcon(win.handle, @ptrCast([*c]const u8, path)) == false) return Error.FailedToLoadIcon;
 
         const mem = try fs.readFile(alloc, path);
         defer alloc.free(mem);

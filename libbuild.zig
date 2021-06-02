@@ -40,14 +40,14 @@ pub fn compileGLFWWin32(exe: *Build.LibExeObjStep, comptime enginepath: []const 
 
     exe.defineCMacro("_GLFW_WIN32");
 
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/wgl_context.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/wgl_context.c", &flags);
 
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/win32_init.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/win32_joystick.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/win32_monitor.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/win32_thread.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/win32_time.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/win32_window.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/win32_init.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/win32_joystick.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/win32_monitor.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/win32_thread.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/win32_time.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/win32_window.c", &flags);
 }
 
 pub fn compileGLFWLinux(exe: *Build.LibExeObjStep, comptime enginepath: []const u8) void {
@@ -56,32 +56,32 @@ pub fn compileGLFWLinux(exe: *Build.LibExeObjStep, comptime enginepath: []const 
 
     exe.defineCMacro("_GLFW_X11");
 
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/glx_context.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/glx_context.c", &flags);
 
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/posix_thread.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/posix_time.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/posix_thread.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/posix_time.c", &flags);
 
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/x11_init.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/x11_window.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/x11_monitor.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/x11_init.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/x11_window.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/x11_monitor.c", &flags);
 
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/xkb_unicode.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/linux_joystick.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/xkb_unicode.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/linux_joystick.c", &flags);
 }
 
 pub fn compileGLFWShared(exe: *Build.LibExeObjStep, comptime enginepath: []const u8) void {
     const flags = [_][]const u8{"-O2"} ++ globalflags;
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/init.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/context.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/input.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/monitor.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/window.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/vulkan.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/init.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/context.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/input.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/monitor.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/window.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/vulkan.c", &flags);
 
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/osmesa_context.c", &flags);
-    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.2/src/egl_context.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/osmesa_context.c", &flags);
+    exe.addCSourceFile(enginepath ++ "include/glfw-3.3.4/src/egl_context.c", &flags);
 
-    exe.addIncludeDir(enginepath ++ "include/glfw-3.3.2/include/");
+    exe.addIncludeDir(enginepath ++ "include/glfw-3.3.4/include/");
 }
 
 pub fn compileOneFile(exe: *Build.LibExeObjStep, comptime enginepath: []const u8) void {
@@ -90,6 +90,7 @@ pub fn compileOneFile(exe: *Build.LibExeObjStep, comptime enginepath: []const u8
     exe.addCSourceFile(enginepath ++ "include/onefile/stb/image.c", &flags);
     exe.addCSourceFile(enginepath ++ "include/onefile/stb/rect_pack.c", &flags);
     exe.addCSourceFile(enginepath ++ "include/onefile/stb/truetype.c", &flags);
+    exe.addCSourceFile(enginepath ++ "src/core/private.c", &flags);
 }
 
 pub fn setup(b: *Builder, target: Zig.CrossTarget, comptime gamename: []const u8, comptime gamepath: []const u8, comptime enginepath: []const u8) *Build.LibExeObjStep {
