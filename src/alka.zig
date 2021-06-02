@@ -659,13 +659,13 @@ pub fn drawCircleAdv(center: m.Vec2f, radius: f32, segments: i32, startangle: i3
 /// Draws a circle lines, 16 segments by default
 /// Draw mode: lines
 pub fn drawCircleLines(position: m.Vec2f, radius: f32, colour: Colour) Error!void {
-    return drawCircleLinesV(position, radius, 16, 0, 360, colour);
+    return drawCircleLinesAdv(position, radius, 16, 0, 360, colour);
 }
 
 // source: https://github.com/raysan5/raylib/blob/f1ed8be5d7e2d966d577a3fd28e53447a398b3b6/src/shapes.c#L298
 /// Draws a circle lines
 /// Draw mode: lines
-pub fn drawCircleLinesV(center: m.Vec2f, radius: f32, segments: i32, startangle: i32, endangle: i32, colour: Colour) Error!void {
+pub fn drawCircleLinesAdv(center: m.Vec2f, radius: f32, segments: i32, startangle: i32, endangle: i32, colour: Colour) Error!void {
     const SMOOTH_CIRCLE_ERROR_RATE = comptime 0.5;
 
     var isegments: i32 = segments;

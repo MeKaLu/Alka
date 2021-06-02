@@ -60,9 +60,9 @@ fn draw() !void {
     //try alka.drawCircleLines(m.Vec2f{ .x = 350, .y = 260 }, 24, col);
     //try alka.drawCircle(m.Vec2f{ .x = 450, .y = 260 }, 24, col);
     // position, radius, segment count, startangle, endangle, colour
-    try alka.drawCircleLinesV(m.Vec2f{ .x = 350, .y = 260 }, 24, 8, 0, 360, col);
+    try alka.drawCircleLinesAdv(m.Vec2f{ .x = 350, .y = 260 }, 24, 8, 0, 360, col);
 
-    try alka.drawCircleLinesV(m.Vec2f{ .x = 350, .y = 360 }, 24, 32, 0, 360, col);
+    try alka.drawCircleLinesAdv(m.Vec2f{ .x = 350, .y = 360 }, 24, 32, 0, 360, col);
 
     try alka.drawCircleAdv(m.Vec2f{ .x = 450, .y = 260 }, 24, 32, 0, 360, col);
     try alka.drawCircleAdv(m.Vec2f{ .x = 450, .y = 360 }, 24, 8, 0, 360, col);
