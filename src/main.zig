@@ -49,8 +49,6 @@ pub fn main() !void {
 
     defcam = alka.getCamera2D();
 
-    try alka.getWindow().setIcon(alka.getAllocator(), "assets/icon.png");
-
     try alka.open();
     try alka.update();
     try alka.close();
