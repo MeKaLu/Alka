@@ -220,7 +220,7 @@ pub fn update() !void {
         try glfw.pollEvents();
 
         // Clean all the batches
-        try cleanAllBatchs();
+        cleanAllBatchs();
 
         try p.frametime.stop();
         try p.frametime.sleep(p.targetfps);
@@ -442,7 +442,7 @@ pub fn renderBatch(batch: Batch) Error!void {
 }
 
 /// Cleans the batch
-pub fn cleanPrivateBatch(batch: Batch) Error!void {
+pub fn cleanBatch(batch: Batch) void {
     const i = @intCast(usize, batch.id);
     return pr.cleanPrivateBatch(i);
 }
@@ -456,10 +456,10 @@ pub fn renderAllBatchs() Error!void {
 }
 
 /// Cleans all the batchs 
-pub fn cleanAllBatchs() Error!void {
+pub fn cleanAllBatchs() void {
     var i: usize = 0;
     while (i < p.batch_counter) : (i += 1) {
-        try pr.cleanPrivateBatch(i);
+        pr.cleanPrivateBatch(i);
     }
 }
 
@@ -512,7 +512,7 @@ pub fn drawPixel(pos: m.Vec2f, colour: Colour) Error!void {
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
             try pr.drawPrivateBatch(i);
-            try pr.cleanPrivateBatch(i);
+            pr.cleanPrivateBatch(i);
             //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
@@ -540,7 +540,7 @@ pub fn drawLine(start: m.Vec2f, end: m.Vec2f, thickness: f32, colour: Colour) Er
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
             try pr.drawPrivateBatch(i);
-            try pr.cleanPrivateBatch(i);
+            pr.cleanPrivateBatch(i);
             //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
@@ -615,7 +615,7 @@ pub fn drawCircleAdv(center: m.Vec2f, radius: f32, segments: i32, startangle: i3
         p.batchs[batch_id].data.submitDrawable(vx) catch |err| {
             if (err == Error.ObjectOverflow) {
                 try pr.drawPrivateBatch(batch_id);
-                try pr.cleanPrivateBatch(batch_id);
+                pr.cleanPrivateBatch(batch_id);
                 //alog.notice("batch(id: {}) flushed!", .{i});
 
                 return p.batchs[batch_id].data.submitDrawable(vx);
@@ -645,7 +645,7 @@ pub fn drawCircleAdv(center: m.Vec2f, radius: f32, segments: i32, startangle: i3
         p.batchs[batch_id].data.submitDrawable(vx) catch |err| {
             if (err == Error.ObjectOverflow) {
                 try pr.drawPrivateBatch(batch_id);
-                try pr.cleanPrivateBatch(batch_id);
+                pr.cleanPrivateBatch(batch_id);
                 //alog.notice("batch(id: {}) flushed!", .{i});
 
                 return p.batchs[batch_id].data.submitDrawable(vx);
@@ -753,7 +753,7 @@ pub fn drawRectangle(rect: m.Rectangle, colour: Colour) Error!void {
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
             try pr.drawPrivateBatch(i);
-            try pr.cleanPrivateBatch(i);
+            pr.cleanPrivateBatch(i);
             //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);
@@ -789,7 +789,7 @@ pub fn drawRectangleAdv(rect: m.Rectangle, origin: m.Vec2f, angle: f32, colour: 
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
             try pr.drawPrivateBatch(i);
-            try pr.cleanPrivateBatch(i);
+            pr.cleanPrivateBatch(i);
             //alog.notice("batch(id: {}) flushed!", .{i});
 
             return p.batchs[i].data.submitDrawable(vx);

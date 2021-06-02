@@ -85,7 +85,7 @@ fn draw() !void {
     // renderBatch(batch: Batch) Error!void
     //
     // explicitly clears the batch
-    // cleanBatch(batch: Batch) Error!void
+    // cleanBatch(batch: Batch) void
 
     // push the batch
     try alka.pushBatch(batch);

@@ -31,7 +31,7 @@ const c = core.c;
 const m = core.math;
 const utils = core.utils;
 
-const AssetManager = @import("assetmanager.zig").AssetManager;
+pub const AssetManager = @import("assetmanager.zig").AssetManager;
 const asseterror = @import("assetmanager.zig").Error;
 
 usingnamespace core.log;
@@ -220,7 +220,7 @@ pub fn renderPrivateBatch(i: usize) Error!void {
     } else if (p.batchs[i].data.submission_counter > 0) alog.debug("batch(id: {}) <render> operation cannot be done, state: {}", .{ i, p.batchs[i].state });
 }
 
-pub fn cleanPrivateBatch(i: usize) Error!void {
+pub fn cleanPrivateBatch(i: usize) void {
     p.batchs[i].data.cleanAll();
     p.batchs[i].data.submission_counter = 0;
     p.batchs[i].cam2d = p.defaults.cam2d;
@@ -296,7 +296,7 @@ pub fn submitTextureQuad(i: usize, p0: m.Vec2f, p1: m.Vec2f, p2: m.Vec2f, p3: m.
     p.batchs[i].data.submitDrawable(vx) catch |err| {
         if (err == Error.ObjectOverflow) {
             try drawPrivateBatch(i);
-            try cleanPrivateBatch(i);
+            cleanPrivateBatch(i);
 
             try p.batchs[i].data.submitDrawable(vx);
             //alog.notice("batch(id: {}) flushed!", .{i});

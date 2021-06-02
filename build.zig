@@ -70,6 +70,13 @@ pub fn build(b: *Builder) void {
         }
 
         {
+            const exe = lib.setupWithStatic(b, target, "camera2d_advanced", "examples/camera2d_advanced.zig", "./");
+            exe.setOutputDir("build");
+            exe.setBuildMode(mode);
+            exe.install();
+        }
+
+        {
             const exe = lib.setupWithStatic(b, target, "gui", "examples/gui.zig", "./");
             exe.setOutputDir("build");
             exe.setBuildMode(mode);
