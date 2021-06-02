@@ -227,7 +227,7 @@ const Canvas = struct {
                 }
             }
         }
-        const cam = alka.getCamera2D();
+        const cam = alka.getCamera2DPushed();
         const mpos = alka.getMousePosition();
         //const mpos = cam.worldToScreen(alka.getMousePosition());
         //alog.debug("mpos: {d:.0}:{d:.0}", .{ mpos.x, mpos.y });

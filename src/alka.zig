@@ -110,6 +110,8 @@ pub fn init(alloc: *std.mem.Allocator, callbacks: Callbacks, width: i32, height:
         try glfw.swapInterval(0);
     }
 
+    //p.layers = try utils.UniqueList(pr.Private.Layer).init(p.alloc, 1);
+
     p.defaults.cam2d = m.Camera2D{};
     p.defaults.cam2d.ortho = m.Mat4x4f.ortho(0, @intToFloat(f32, p.win.size.width), @intToFloat(f32, p.win.size.height), 0, -1, 1);
 
@@ -126,7 +128,7 @@ pub fn init(alloc: *std.mem.Allocator, callbacks: Callbacks, width: i32, height:
         try p.assetmanager.loadTexturePro(pr.embed.white_texture_id, wtexture);
     }
 
-    p.layers = try utils.UniqueList(pr.Private.Layer).init(p.alloc, 1);
+    popCamera2D();
 
     pengineready = true;
     alog.info("fully initialized!", .{});
@@ -147,9 +149,9 @@ pub fn deinit() Error!void {
         p.alloc.free(p.batchs);
     }
 
-    p.assetmanager.deinit();
+    //p.layers.deinit();
 
-    p.layers.deinit();
+    p.assetmanager.deinit();
 
     try p.win.destroy();
     gl.deinit();
@@ -208,6 +210,8 @@ pub fn update() !void {
         if (p.callbacks.draw) |fun| {
             try fun();
         }
+
+        popCamera2D();
 
         // Render all the batches
         try renderAllBatchs();
@@ -268,8 +272,23 @@ pub fn getAssetManager() *AssetManager {
 }
 
 /// Returns the ptr to default camera2d
-pub fn getCamera2D() *m.Camera2D {
+pub fn getCamera2DPtr() *m.Camera2D {
     return &p.defaults.cam2d;
+}
+
+/// Returns the read-only default camera2d
+pub fn getCamera2D() m.Camera2D {
+    return p.defaults.cam2d;
+}
+
+/// Returns the ptr to pushed camera2d
+pub fn getCamera2DPushedPtr() *m.Camera2D {
+    return &p.force_camera2d;
+}
+
+/// Returns the read-only pushed camera2d
+pub fn getCamera2DPushed() m.Camera2D {
+    return p.force_camera2d;
 }
 
 /// Returns the requested batch with given attribs
@@ -325,11 +344,11 @@ pub fn createBatch(mode: gl.DrawMode, sh_id: u64, texture_id: u64) Error!Batch {
     b.mode = mode;
     b.shader = try p.assetmanager.getShader(sh_id);
     b.texture = try p.assetmanager.getTexture(texture_id);
-    b.cam2d = p.defaults.cam2d;
+    b.cam2d = p.force_camera2d;
 
     return Batch{
         .id = @intCast(i32, i),
-        .mode = mode,
+        .mode = b.mode,
         .shader = b.shader,
         .texture = b.texture,
         .cam2d = &b.cam2d,
@@ -353,13 +372,13 @@ pub fn createBatchNoID(mode: gl.DrawMode, sh: u32, texture: renderer.Texture) Er
     b.mode = mode;
     b.shader = sh;
     b.texture = texture;
-    b.cam2d = p.defaults.cam2d;
+    b.cam2d = p.force_camera2d;
 
     return Batch{
         .id = @intCast(i32, i),
-        .mode = mode,
-        .shader = sh,
-        .texture = texture,
+        .mode = b.mode,
+        .shader = b.shader,
+        .texture = b.texture,
         .cam2d = &b.cam2d,
         .subcounter = &b.data.submission_counter,
     };
@@ -373,7 +392,9 @@ pub fn setBatchFun(batch: Batch) void {
 }
 
 /// Sets the batch layer 
-pub fn setBatchLayer(layer: i64) void {}
+pub fn setBatchLayer(layer: i64) void {
+    @compileError("This functionality does not implemented.");
+}
 
 /// Sets the callbacks
 pub fn setCallbacks(calls: Callbacks) void {
@@ -388,7 +409,7 @@ pub fn setBackgroundColour(r: f32, g: f32, b: f32) void {
 /// Automatically resizes/strecthes the view/camera
 /// Recommended to use after initializing the engine and `resize` callback
 pub fn autoResize(virtualwidth: i32, virtualheight: i32, screenwidth: i32, screenheight: i32) void {
-    var cam = getCamera2D();
+    var cam = &p.force_camera2d;
 
     const aspect: f32 = @intToFloat(f32, virtualwidth) / @intToFloat(f32, virtualheight);
     var width = screenwidth;
@@ -440,6 +461,16 @@ pub fn cleanAllBatchs() Error!void {
     while (i < p.batch_counter) : (i += 1) {
         try pr.cleanPrivateBatch(i);
     }
+}
+
+/// Pushes the given camera2D
+pub fn pushCamera2D(cam: m.Camera2D) void {
+    p.force_camera2d = cam;
+}
+
+/// Pops the camera2D
+pub fn popCamera2D() void {
+    p.force_camera2d = getCamera2D();
 }
 
 /// Forces to use the given shader
