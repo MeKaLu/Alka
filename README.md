@@ -1,5 +1,5 @@
 # Alka
-Game engine written in zig, compatible with **master branch**.
+Game engine written in zig, compatible with **zig version 0.8.0**.
 
 This engine does provide a toolset for you but generally you have to implement how they work and how should be.
 
