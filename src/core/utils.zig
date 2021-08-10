@@ -72,10 +72,8 @@ pub fn UniqueList(comptime generic_type: type) type {
 
         /// Clears the list
         pub fn clear(self: *Self) void {
-            var i: usize = 0;
-            while (i < self.items.len) : (i += 1) {
-                self.items[i].data = null;
-                self.items[i].id = 0;
+            for (self.items) |*item| {
+                item.* = Item{.data = null, .id = 0};
             }
         }
 
@@ -100,9 +98,8 @@ pub fn UniqueList(comptime generic_type: type) type {
 
         /// Is the given id unique?
         pub fn isUnique(self: Self, id: u64) bool {
-            var i: usize = 0;
-            while (i < self.items.len) : (i += 1) {
-                if (self.items[i].data != null and self.items[i].id == id) return false;
+            for (self.items) |item| {
+                if (item.data != null and item.id == id) return false;
             }
             return true;
         }
@@ -137,38 +134,34 @@ pub fn UniqueList(comptime generic_type: type) type {
             while (i < self.items.len) : (i += 1) {
                 if (self.isEmpty(i)) return self.insertAt(id, i, data);
             }
-            try self.reserveSlots(1);
-            return self.append(id, data); 
+            try self.reserveSlots(2);
+            return self.insertAt(id, self.end() - 1, data); 
         }
 
         /// Removes the item with given id
         pub fn remove(self: *Self, id: u64) bool {
-            var i: usize = 0;
-            while (i < self.items.len) : (i += 1) {
-                if (self.items[i].data != null and self.items[i].id == id) {
-                    self.items[i].data = null;
-                    self.items[i].id = undefined;
+            for (self.items) |*item| {
+                if (item.data != null and item.id == id) {
+                    item.data = null;
+                    item.id = undefined;
                     return true;
                 }
             }
-
             return false;
         }
 
         /// Returns the data with given id
         pub fn get(self: Self, id: u64) Error!T {
-            var i: usize = 0;
-            while (i < self.items.len) : (i += 1) {
-                if (self.items[i].data != null and self.items[i].id == id) return self.items[i].data.?;
+            for (self.items) |item| {
+                if (item.data != null and item.id == id) return item.data.?;
             }
             return Error.InvalidID;
         }
 
         /// Returns the ptr to the data with given id
-        pub fn getPtr(self: Self, id: u64) Error!*T {
-            var i: usize = 0;
-            while (i < self.items.len) : (i += 1) {
-                if (self.items[i].data != null and self.items[i].id == id) return &self.items[i].data.?;
+        pub fn getPtr(self: *Self, id: u64) Error!*T {
+            for (self.items) |*item| {
+                if (item.data != null and item.id == id) return &item.data.?;
             }
             return Error.InvalidID;
         }
@@ -220,13 +213,11 @@ pub fn UniqueFixedList(comptime generic_type: type, comptime generic_max: usize)
             self.clear();
             return self;
         }
-
+        
         /// Clears the list
         pub fn clear(self: *Self) void {
-            var i: usize = 0;
-            while (i < self.items.len) : (i += 1) {
-                self.items[i].data = null;
-                self.items[i].id = 0;
+            for (self.items) |*item| {
+                item.* = Item{.data = null, .id = 0};
             }
         }
 
@@ -237,9 +228,8 @@ pub fn UniqueFixedList(comptime generic_type: type, comptime generic_max: usize)
 
         /// Is the given id unique?
         pub fn isUnique(self: Self, id: u64) bool {
-            var i: usize = 0;
-            while (i < self.items.len) : (i += 1) {
-                if (self.items[i].data != null and self.items[i].id == id) return false;
+            for (self.items) |item| {
+                if (item.data != null and item.id == id) return false;
             }
             return true;
         }
@@ -279,32 +269,28 @@ pub fn UniqueFixedList(comptime generic_type: type, comptime generic_max: usize)
 
         /// Removes the item with given id
         pub fn remove(self: *Self, id: u64) bool {
-            var i: usize = 0;
-            while (i < self.items.len) : (i += 1) {
-                if (self.items[i].data != null and self.items[i].id == id) {
-                    self.items[i].data = null;
-                    self.items[i].id = undefined;
+            for (self.items) |*item| {
+                if (item.data != null and item.id == id) {
+                    item.data = null;
+                    item.id = undefined;
                     return true;
                 }
             }
-
             return false;
         }
 
         /// Returns the data with given id
         pub fn get(self: Self, id: u64) Error!T {
-            var i: usize = 0;
-            while (i < self.items.len) : (i += 1) {
-                if (self.items[i].data != null and self.items[i].id == id) return self.items[i].data.?;
+            for (self.items) |item| {
+                if (item.data != null and item.id == id) return item.data.?;
             }
             return Error.InvalidID;
         }
 
         /// Returns the ptr to the data with given id
         pub fn getPtr(self: *Self, id: u64) Error!*T {
-            var i: usize = 0;
-            while (i < self.items.len) : (i += 1) {
-                if (self.items[i].data != null and self.items[i].id == id) return &self.items[i].data.?;
+            for (self.items) |*item| {
+                if (item.data != null and item.id == id) return &item.data.?;
             }
             return Error.InvalidID;
         }
