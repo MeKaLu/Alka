@@ -60,7 +60,7 @@ pub fn UniqueList(comptime generic_type: type) type {
                 .alloc = alloc,
             };
 
-            self.items = self.alloc.alloc(Item, reserve + 1) catch return Error.FailedtoAllocate;
+            self.items = self.alloc.alloc(Item, if (reserve == 0) 1 else reserve) catch return Error.FailedtoAllocate;
             self.clear();
             return self;
         }
@@ -81,14 +81,16 @@ pub fn UniqueList(comptime generic_type: type) type {
 
         /// Reserves memory
         pub fn reserveSlots(self: *Self, reserve: usize) Error!void {
-            const epos = self.end();
-            self.items = self.alloc.realloc(self.items, self.items.len + reserve) catch return Error.FailedtoAllocate;
+            const temp = self.items;
+            self.items = self.alloc.alloc(Item, temp.len + reserve) catch return Error.FailedtoAllocate;
 
-            var i: usize = epos;
-            while (i < self.items.len) : (i += 1) {
-                self.items[i].data = null;
-                self.items[i].id = 0;
+            for (self.items) |*item, i| {
+                if (i < temp.len) {
+                    item.* = temp[i];
+                }
+                else item.* = Item{.data = null, .id = 0};
             }
+            self.alloc.free(temp);
         }
 
         /// Returns the end of the list
@@ -133,12 +135,10 @@ pub fn UniqueList(comptime generic_type: type) type {
         pub fn append(self: *Self, id: u64, data: T) Error!void {
             var i: usize = 0;
             while (i < self.items.len) : (i += 1) {
-                if (self.isEmpty(i)) {
-                    return self.insertAt(id, i, data);
-                }
+                if (self.isEmpty(i)) return self.insertAt(id, i, data);
             }
-            try self.reserveSlots(2);
-            return self.insertAt(id, self.end() - 1, data);
+            try self.reserveSlots(1);
+            return self.append(id, data); 
         }
 
         /// Removes the item with given id
@@ -272,9 +272,7 @@ pub fn UniqueFixedList(comptime generic_type: type, comptime generic_max: usize)
         pub fn append(self: *Self, id: u64, data: T) Error!void {
             var i: usize = 0;
             while (i < self.items.len) : (i += 1) {
-                if (self.isEmpty(i)) {
-                    return self.insertAt(id, i, data);
-                }
+                if (self.isEmpty(i)) return self.insertAt(id, i, data);
             }
             return Error.DataOverflow;
         }

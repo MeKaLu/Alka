@@ -35,6 +35,9 @@ pub fn StoreComponent(comptime name: []const u8, comptime Component: type, compt
         pub const Name = name;
 
         alloc: *std.mem.Allocator = undefined,
+        
+        // the reason why this cannot be fixed list is bc
+        // the registered components adress in the memory is fixed
         components: *UniqueFixedList(T, TMax) = undefined,
 
         /// Initializes the storage component
